@@ -83,3 +83,4 @@ flowchart LR
   - `AC-05.1`: Trang Dashboard Quản trị yêu cầu xác thực JWT với quyền `ADMIN`.
   - `AC-05.2`: Hiển thị bảng lịch sử các lần chạy worker (`ingestion_jobs`), số lượng bản ghi thu thập, số bản ghi bị gắn cờ QC, và thời gian phản hồi của từng API.
   - `AC-05.3`: Quản trị viên không thể sửa trực tiếp cột `raw_value`; mọi thao tác đánh dấu chất lượng dữ liệu đều tạo bản ghi trong `audit_logs`.
+

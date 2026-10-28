@@ -3,22 +3,18 @@
 
 ---
 
-## [0.2.0] - 2026-10-28 — HOÀN TẤT XÁC MINH TRẠM THỰC TẾ (GIAI ĐOẠN 0) & HOÀN THÀNH PHÂN TÍCH YÊU CẦU (GIAI ĐOẠN 1)
+## [0.3.0] - 2026-10-28 — HOÀN THÀNH GIAI ĐOẠN 2: THIẾT KẾ UI/UX (WINDY-INSPIRED) & KHỞI TẠO MONOREPO / FRONTEND WEBGIS
 
 ### Đã thêm mới (Added)
-- Xác minh thành công 100% với `OPENAQ_API_KEY` và `WAQI_API_TOKEN` thực tế tại Hà Nội:
-  - Ghi nhận **37 trạm đo PM2.5 (`µg/m³`) trên OpenAQ v3** tại Hà Nội (32 trạm thuộc *Hanoi Air Quality Monitoring Network*), lấy thành công nồng độ PM2.5 mới nhất của 5 trạm đang hoạt động trong ngày (`33.60` – `49.40 µg/m³`).
-  - Ghi nhận **10 trạm trên WAQI** nằm trong địa giới Hà Nội (`AQI` từ `71` đến `122`).
-- Hoàn thành trọn bộ 7 tài liệu Phân tích & Thiết kế của **Giai đoạn 1**:
-  - [`docs/requirements/FUNCTIONAL_REQUIREMENTS.md`](docs/requirements/FUNCTIONAL_REQUIREMENTS.md)
-  - [`docs/requirements/NON_FUNCTIONAL_REQUIREMENTS.md`](docs/requirements/NON_FUNCTIONAL_REQUIREMENTS.md)
-  - [`docs/requirements/USE_CASES_AND_USER_STORIES.md`](docs/requirements/USE_CASES_AND_USER_STORIES.md)
-  - [`docs/architecture/SYSTEM_ARCHITECTURE_AND_DFD.md`](docs/architecture/SYSTEM_ARCHITECTURE_AND_DFD.md)
-  - [`docs/architecture/DATABASE_ERD.md`](docs/architecture/DATABASE_ERD.md)
-  - [`docs/gis/GIS_AND_AQI_SPECIFICATION.md`](docs/gis/GIS_AND_AQI_SPECIFICATION.md)
-  - [`docs/api/API_SPECIFICATION.md`](docs/api/API_SPECIFICATION.md)
-
----
-
-## [0.1.0] - 2026-10-28 — GIAI ĐOẠN 0: KIỂM TRA MÔI TRƯỜNG & KHẢO SÁT DỮ LIỆU BAN ĐẦU
-- Khởi tạo Git repository (`main`), `.gitignore`, `.env.example`, `scripts/verify-data-sources.mjs` và 6 tài liệu khảo sát Giai đoạn 0.
+- Tạo tài liệu đặc tả UI/UX: [`docs/architecture/UI_UX_DESIGN_SPECIFICATION.md`](docs/architecture/UI_UX_DESIGN_SPECIFICATION.md).
+- Khởi tạo Monorepo với npm workspaces (`@hanoi-pm25/shared` và `@hanoi-pm25/web`).
+- Xây dựng thư viện khoa học dùng chung `@hanoi-pm25/shared`:
+  - Tính toán `VN_AQI` và `NowCast 12 giờ` theo Quyết định 1459/QĐ-TCMT.
+  - Phân loại mức độ ô nhiễm PM2.5 theo QCVN 05:2023/BTNMT (`50 µg/m³`) và WHO (`15 µg/m³`).
+  - Phân loại độ tươi dữ liệu (`FRESH`, `DELAYED`, `STALE`, `UNAVAILABLE`) và cờ kiểm soát chất lượng (`quality_flag`).
+- Xây dựng giao diện WebGIS toàn màn hình `@hanoi-pm25/web` (React + TypeScript + Vite + Tailwind CSS + MapLibre GL JS + Recharts):
+  - Bản đồ tương tác Hà Nội (`MapCanvas.tsx`) với lớp ranh giới hành chính, lưới ô mô hình CAMS Global (`0.4° × 0.4° ~ 40 km`) và các trạm quan trắc thực tế.
+  - Hiệu ứng hạt gió chuyển động mượt (`WindParticleOverlay.tsx`) theo tốc độ và hướng gió thực tế.
+  - Thanh Header nổi (`FloatingHeader.tsx`) tích hợp tìm kiếm trạm & Open-Meteo Geocoding API.
+  - Sidebar chọn lớp (`LayerSidebar.tsx`), Popup chi tiết trạm (`StationPopupCard.tsx`), Popup truy vấn vị trí bất kỳ (`PointInspectorCard.tsx`), Thanh Timeline hoạt ảnh & Chú giải màu (`TimelineBar.tsx`), và Ngăn kéo Phân tích 5 tab kèm Xuất CSV (`AnalyticsDrawer.tsx`).
+- Kiểm thử: Vượt qua 9/9 bài kiểm thử Vitest, `tsc --noEmit` 0 lỗi, và `vite build` thành công.

@@ -78,3 +78,4 @@ Khi xảy ra lỗi (Validation / Auth / Rate limit / Server error):
 | `POST` | `/api/v1/admin/import/observations` | `ADMIN` | Nhập tệp dữ liệu quan trắc chuẩn hóa (CSV/JSON) có nguồn gốc hợp lệ (ghi `audit_logs`). |
 | `GET` | `/api/v1/admin/ingestion-jobs` | `ADMIN` | Xem lịch sử đồng bộ dữ liệu (`ingestion_jobs`). |
 | `GET` | `/api/v1/admin/audit-logs` | `ADMIN` | Xem nhật ký kiểm toán hệ thống (`audit_logs`). |
+

@@ -122,3 +122,4 @@ Theo **Quyết định số 1459/QĐ-TCMT ngày 12/11/2019 của Tổng cục M�
 3. **Công thức nội suy tuyến tính từng đoạn tính $AQI_{PM2.5}$:**
    $$AQI_x = \frac{I_{i+1} - I_i}{BP_{i+1} - BP_i} \times (C_x - BP_i) + I_i$$
    *(Kết quả làm tròn thành số nguyên).*
+

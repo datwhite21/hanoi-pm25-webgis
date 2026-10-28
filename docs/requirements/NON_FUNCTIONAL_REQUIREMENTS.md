@@ -43,3 +43,4 @@
 
 1. **`NFR-UX-01` (Responsive Design):** Giao diện hoạt động tốt trên cả màn hình máy tính (`\ge 1280px`), Laptop (`1024px`), Tablet (`768px`) và Điện thoại di động (`375px–430px` với ngăn kéo Bottom Sheet và Sidebar thu gọn).
 2. **`NFR-REL-01` (Chịu lỗi khi API bên ngoài gián đoạn):** Khi một trong các nguồn bên ngoài (`OpenAQ`, `WAQI`, hoặc `Open-Meteo`) bị timeout hoặc lỗi `5xx`, Ingestion Worker phải ghi log lỗi vào `ingestion_jobs`, giữ nguyên hoạt động của các nguồn còn lại và hệ thống WebGIS vẫn phục vụ bình thường từ dữ liệu đã lưu trong PostgreSQL/PostGIS kèm trạng thái độ tươi tương ứng.
+

@@ -1,0 +1,24 @@
+{
+  "name": "hanoi-pm25-webgis",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Near-Real-Time WebGIS System for PM2.5 Air Pollution Monitoring, Spatial Analysis and Warning in Hanoi",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:web": "npm --workspace=@hanoi-pm25/web run dev",
+    "build:shared": "npm --workspace=@hanoi-pm25/shared run build",
+    "build:web": "npm --workspace=@hanoi-pm25/web run build",
+    "build": "npm run build:shared && npm run build:web",
+    "test": "vitest run",
+    "typecheck": "npm --workspace=@hanoi-pm25/shared run typecheck && npm --workspace=@hanoi-pm25/web run typecheck",
+    "verify:sources": "node scripts/verify-data-sources.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

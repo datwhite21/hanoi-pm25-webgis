@@ -1,0 +1,43 @@
+import { describe, expect, it } from 'vitest';
+import {
+  VERIFIED_CAMS_MODEL_GRID_CELLS,
+  VERIFIED_HANOI_STATIONS,
+  inspectArbitraryHanoiPoint,
+} from '../data/verifiedHanoiSnapshot.js';
+
+describe('Hanoi WebGIS Snapshot & Spatial Point Inspector', () => {
+  it('contains real verified OpenAQ v3 and WAQI stations within Hanoi', () => {
+    expect(VERIFIED_HANOI_STATIONS.length).toBeGreaterThanOrEqual(13);
+    const freshStations = VERIFIED_HANOI_STATIONS.filter((s) => s.freshnessStatus === 'FRESH');
+    expect(freshStations.length).toBeGreaterThanOrEqual(5);
+
+    const nhanChinh = VERIFIED_HANOI_STATIONS.find((s) => s.externalStationId === '4946812');
+    expect(nhanChinh).toBeDefined();
+    expect(nhanChinh?.latestPm25UgM3).toBe(33.6);
+    expect(nhanChinh?.valueOrigin).toBe('DIRECT_CONCENTRATION');
+
+    const unisWaqi = VERIFIED_HANOI_STATIONS.find((s) => s.externalStationId === '8688');
+    expect(unisWaqi).toBeDefined();
+    expect(unisWaqi?.valueOrigin).toBe('DERIVED_FROM_US_AQI');
+  });
+
+  it('inspects an arbitrary suburban point in Soc Son and returns nearest active station + CAMS 40km grid cell with disclaimer', () => {
+    // Soc Son coordinate (21.25, 105.85)
+    const inspection = inspectArbitraryHanoiPoint(21.25, 105.85);
+    expect(inspection.isWithinHanoi).toBe(true);
+    expect(inspection.nearestActiveStation).not.toBeNull();
+    expect(inspection.nearestActiveStation!.distanceKm).toBeGreaterThan(15);
+    expect(inspection.modelGridCell).not.toBeNull();
+    expect(inspection.modelGridCell?.resolutionDeg).toBe(0.4);
+    expect(inspection.scientificDisclaimerVi).toContain('LƯU Ý KHOA HỌC');
+  });
+
+  it('covers Hanoi with 0.4-degree (~40 km) CAMS Global model grid cells', () => {
+    expect(VERIFIED_CAMS_MODEL_GRID_CELLS.length).toBe(4);
+    for (const cell of VERIFIED_CAMS_MODEL_GRID_CELLS) {
+      expect(cell.resolutionDeg).toBe(0.4);
+      expect(cell.pm25UgM3).toBeGreaterThan(0);
+    }
+  });
+});
+

@@ -263,3 +263,4 @@ CREATE INDEX idx_pm25_obs_valid_time_desc ON pm25_observations (measured_at_utc 
 CREATE INDEX idx_model_values_valid_time ON model_pm25_values (valid_at_utc DESC, grid_cell_id);
 CREATE INDEX idx_weather_observed_time ON weather_data (observed_at_utc DESC);
 ```
+

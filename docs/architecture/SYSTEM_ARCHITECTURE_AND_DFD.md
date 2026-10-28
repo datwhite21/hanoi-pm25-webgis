@@ -143,3 +143,4 @@ Trong thư mục `apps/api/src/modules/`, hệ thống được chia thành 6 mo
 4. `analytics/`: Xử lý tổng hợp thời gian (theo giờ/ngày), tính hệ số tương quan khí tượng Pearson $r$, so sánh đa trạm và xuất CSV/PDF.
 5. `alerts/`: Động cơ quy tắc phát hiện vượt ngưỡng QCVN 05:2023/BTNMT, WHO và phát hiện trạm mất tín hiệu (`STALE`/`UNAVAILABLE`).
 6. `admin/`: Quản lý người dùng, phân quyền JWT, nhật ký `ingestion_jobs` và `audit_logs`.
+

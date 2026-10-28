@@ -65,3 +65,4 @@
 | **`FR-ALT-02`** | Cảnh báo kỹ thuật (Trạm mất dữ liệu / Bất thường) | Tự động phát cảnh báo khi trạm đang hoạt động chuyển sang `STALE`/`UNAVAILABLE` hoặc khi xuất hiện giá trị `SUSPECT_SPIKE` / `INVALID`. Có cơ chế chống tạo cảnh báo trùng lặp (`deduplication_key`). | Bắt buộc |
 | **`FR-USR-01`** | Xác thực & Phân quyền 3 vai trò (`GUEST`, `USER`, `ADMIN`) | Khách xem toàn bộ bản đồ, phân tích và cảnh báo chung. Người dùng đăng ký lưu địa điểm yêu thích (`user_favorite_locations`) và cấu hình ngưỡng cảnh báo cá nhân. | Bắt buộc |
 | **`FR-USR-02`** | Quản trị hệ thống & Kiểm toán dữ liệu (`ADMIN`) | Quản trị viên quản lý danh mục trạm, cấu hình nguồn dữ liệu, kích hoạt đồng bộ thủ công, xem lịch sử `ingestion_jobs`, nhập file dữ liệu kiểm định (CSV/JSON) và hiệu chỉnh có lưu vết (`audit_logs`) mà không bao giờ xóa/ghi đè giá trị gốc (`raw_value`). | Bắt buộc |
+
