@@ -66,3 +66,4 @@ main().catch(async (err) => {
   await dbPool.end();
   process.exit(1);
 });
+

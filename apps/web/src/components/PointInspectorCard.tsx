@@ -11,13 +11,28 @@ import { classifyPm25Level } from '@hanoi-pm25/shared';
 import { useWebGisStore } from '../store/useWebGisStore.js';
 
 export const PointInspectorCard: React.FC = () => {
-  const { inspectedPoint, clearInspection, selectStation } = useWebGisStore();
+  const {
+    inspectedPoint,
+    selectedAreaStats,
+    inspectAdministrativeArea,
+    clearInspection,
+    selectStation,
+  } = useWebGisStore();
 
   if (!inspectedPoint) return null;
 
   const nearestActive = inspectedPoint.nearestActiveStation;
   const modelCell = inspectedPoint.modelGridCell;
   const modelClass = modelCell ? classifyPm25Level(modelCell.pm25UgM3) : null;
+
+  const QUICK_AREAS = [
+    { code: 'HN-HBT', nameVi: 'Hai Bà Trưng' },
+    { code: 'HN-TX', nameVi: 'Thanh Xuân' },
+    { code: 'HN-GL', nameVi: 'Gia Lâm' },
+    { code: 'HN-TH', nameVi: 'Tây Hồ' },
+    { code: 'HN-HD', nameVi: 'Hà Đông' },
+    { code: 'HN-SS', nameVi: 'Sóc Sơn (0 trạm)' },
+  ];
 
   return (
     <section
@@ -136,6 +151,62 @@ export const PointInspectorCard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* 3. PostGIS Administrative Area Statistics (ST_Within & ST_Intersects) */}
+      <div className="mt-3 p-3 rounded-xl bg-slate-950/80 border border-slate-800">
+        <div className="text-[11px] font-semibold text-purple-300 mb-1.5">
+          3. Truy vấn Thống kê Không gian theo Khu vực (PostGIS ST_Within)
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {QUICK_AREAS.map((area) => (
+            <button
+              key={area.code}
+              type="button"
+              onClick={() => inspectAdministrativeArea(area.code)}
+              className={`px-2 py-1 rounded-lg text-[10px] font-semibold border transition ${
+                selectedAreaStats?.area.code === area.code
+                  ? 'bg-purple-500/30 border-purple-400 text-white'
+                  : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
+              }`}
+            >
+              {area.nameVi}
+            </button>
+          ))}
+        </div>
+
+        {selectedAreaStats && (
+          <div className="mt-2.5 pt-2 border-t border-slate-800 text-[11px] space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-white">
+                {selectedAreaStats.area.nameVi} ({selectedAreaStats.area.code})
+              </span>
+              <span className="text-slate-400">
+                Diện tích: {selectedAreaStats.area.areaSqKm} km²
+              </span>
+            </div>
+            <div className="text-slate-300">
+              Trạm hoạt động trong vùng:{' '}
+              <strong className="text-emerald-300">
+                {selectedAreaStats.observedStatistics.activeStationsInArea}/
+                {selectedAreaStats.observedStatistics.totalStationsInArea} trạm
+              </strong>
+              {selectedAreaStats.observedStatistics.avgObservedPm25UgM3 !==
+                null && (
+                <span>
+                  {' '}
+                  · Trung bình đo thực tế:{' '}
+                  <strong className="text-amber-300">
+                    {selectedAreaStats.observedStatistics.avgObservedPm25UgM3} µg/m³
+                  </strong>
+                </span>
+              )}
+            </div>
+            <p className="text-[10px] text-slate-400 italic">
+              {selectedAreaStats.observedStatistics.scientificNoteVi}
+            </p>
+          </div>
+        )}
+      </div>
     </section>
   );
 };

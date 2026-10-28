@@ -5,7 +5,6 @@ import { classifyPm25Level } from '@hanoi-pm25/shared';
 import {
   HANOI_MAP_CENTER,
   VERIFIED_CAMS_MODEL_GRID_CELLS,
-  VERIFIED_HANOI_STATIONS,
   VERIFIED_TIMELINE_SLOTS,
 } from '../data/verifiedHanoiSnapshot.js';
 import { HANOI_ADMIN_BOUNDARIES_GEOJSON } from '../data/hanoiAdminBoundariesGeoJson.js';
@@ -27,6 +26,7 @@ export const MapCanvas: React.FC = () => {
     modelGridOpacity,
     stationFilter,
     searchQuery,
+    stations,
     selectedStation,
     inspectedPoint,
     timelineIndex,
@@ -38,7 +38,7 @@ export const MapCanvas: React.FC = () => {
   const timelineRatio = currentSlot.cityMeanModelPm25 / 42.7;
 
   const filteredStations = useMemo(() => {
-    return VERIFIED_HANOI_STATIONS.filter((st) => {
+    return stations.filter((st) => {
       if (stationFilter !== 'ALL' && st.freshnessStatus !== stationFilter) {
         return false;
       }
@@ -53,7 +53,7 @@ export const MapCanvas: React.FC = () => {
       }
       return true;
     });
-  }, [stationFilter, searchQuery]);
+  }, [stations, stationFilter, searchQuery]);
 
   // Build dynamic GeoJSON for the ~40km CAMS Global model grid cells
   const modelGridGeoJson = useMemo(() => {

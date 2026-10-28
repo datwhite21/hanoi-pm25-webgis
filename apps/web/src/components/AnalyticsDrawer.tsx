@@ -21,11 +21,6 @@ import {
   YAxis,
 } from 'recharts';
 import { classifyPm25Level } from '@hanoi-pm25/shared';
-import {
-  VERIFIED_ALERTS,
-  VERIFIED_DATA_SOURCES,
-  VERIFIED_HANOI_STATIONS,
-} from '../data/verifiedHanoiSnapshot.js';
 import { useWebGisStore, type DrawerTab } from '../store/useWebGisStore.js';
 
 export const AnalyticsDrawer: React.FC = () => {
@@ -34,6 +29,9 @@ export const AnalyticsDrawer: React.FC = () => {
     activeDrawerTab,
     openDrawer,
     closeDrawer,
+    stations,
+    alerts,
+    dataSources,
     selectedStation,
     selectStation,
     comparedStationIds,
@@ -42,8 +40,8 @@ export const AnalyticsDrawer: React.FC = () => {
 
   if (!isDrawerOpen) return null;
 
-  const focusStation = selectedStation ?? VERIFIED_HANOI_STATIONS[0];
-  const comparedStations = VERIFIED_HANOI_STATIONS.filter((s) =>
+  const focusStation = selectedStation ?? stations[0];
+  const comparedStations = stations.filter((s) =>
     comparedStationIds.includes(s.id)
   );
 
@@ -64,7 +62,7 @@ export const AnalyticsDrawer: React.FC = () => {
       'Quality_Flag',
       'Measured_At_Local',
     ];
-    const rows = VERIFIED_HANOI_STATIONS.map((s) => [
+    const rows = stations.map((s) => [
       s.externalStationId,
       `"${s.name}"`,
       `"${s.providerName}"`,
@@ -109,7 +107,7 @@ export const AnalyticsDrawer: React.FC = () => {
     },
     {
       id: 'alerts',
-      labelVi: `Cảnh báo (${VERIFIED_ALERTS.length})`,
+      labelVi: `Cảnh báo (${alerts.length})`,
       icon: <AlertTriangle className="w-4 h-4" />,
     },
     {
@@ -185,14 +183,14 @@ export const AnalyticsDrawer: React.FC = () => {
                 <select
                   value={focusStation.id}
                   onChange={(e) => {
-                    const st = VERIFIED_HANOI_STATIONS.find((s) => s.id === e.target.value);
+                    const st = stations.find((s) => s.id === e.target.value);
                     if (st) selectStation(st);
                   }}
                   className="px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 font-semibold"
                 >
-                  {VERIFIED_HANOI_STATIONS.filter((s) => s.hourlyHistory.length > 0).map((s) => (
+                  {stations.filter((s) => s.hourlyHistory.length > 0).map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.name} ({s.latestPm25UgM3} µg/m³)
+                      {s.name} ({s.latestPm25UgM3 !== null ? `${s.latestPm25UgM3} µg/m³` : 'Lịch sử'})
                     </option>
                   ))}
                 </select>
@@ -247,7 +245,7 @@ export const AnalyticsDrawer: React.FC = () => {
 
               <div className="h-72 w-full bg-slate-950/70 rounded-2xl p-4 border border-slate-800">
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={VERIFIED_HANOI_STATIONS[0].hourlyHistory}>
+                  <ComposedChart data={focusStation.hourlyHistory}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
                     <XAxis dataKey="timeLocal" stroke="#94A3B8" />
                     <YAxis yAxisId="left" stroke="#10B981" unit=" µg/m³" />
@@ -354,7 +352,7 @@ export const AnalyticsDrawer: React.FC = () => {
                 Danh sách Cảnh báo Ô nhiễm PM2.5 & Cảnh báo Kỹ thuật (Phân biệt Quan trắc vs Mô
                 hình)
               </h3>
-              {VERIFIED_ALERTS.map((alt) => (
+              {alerts.map((alt) => (
                 <div
                   key={alt.id}
                   className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
@@ -412,7 +410,7 @@ export const AnalyticsDrawer: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/80 bg-slate-950/40">
-                    {VERIFIED_DATA_SOURCES.map((src) => (
+                    {dataSources.map((src) => (
                       <tr key={src.code} className="hover:bg-slate-800/40">
                         <td className="p-3 font-mono font-bold text-sky-300">{src.code}</td>
                         <td className="p-3 font-semibold text-white">{src.name}</td>

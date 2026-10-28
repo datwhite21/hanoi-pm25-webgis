@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AnalyticsDrawer } from './components/AnalyticsDrawer.js';
 import { FloatingHeader } from './components/FloatingHeader.js';
 import { LayerSidebar } from './components/LayerSidebar.js';
@@ -6,8 +6,17 @@ import { MapCanvas } from './components/MapCanvas.js';
 import { PointInspectorCard } from './components/PointInspectorCard.js';
 import { StationPopupCard } from './components/StationPopupCard.js';
 import { TimelineBar } from './components/TimelineBar.js';
+import { useWebGisStore } from './store/useWebGisStore.js';
 
 export const App: React.FC = () => {
+  const syncWithPostgisBackend = useWebGisStore(
+    (s) => s.syncWithPostgisBackend
+  );
+
+  useEffect(() => {
+    syncWithPostgisBackend();
+  }, [syncWithPostgisBackend]);
+
   return (
     <main className="relative w-screen h-screen overflow-hidden select-none bg-slate-950 text-slate-100">
       {/* 1. Fullscreen Interactive MapLibre GL JS Map */}

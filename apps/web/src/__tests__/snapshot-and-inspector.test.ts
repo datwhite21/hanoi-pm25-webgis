@@ -4,6 +4,7 @@ import {
   VERIFIED_HANOI_STATIONS,
   inspectArbitraryHanoiPoint,
 } from '../data/verifiedHanoiSnapshot.js';
+import { useWebGisStore } from '../store/useWebGisStore.js';
 
 describe('Hanoi WebGIS Snapshot & Spatial Point Inspector', () => {
   it('contains real verified OpenAQ v3 and WAQI stations within Hanoi', () => {
@@ -38,6 +39,21 @@ describe('Hanoi WebGIS Snapshot & Spatial Point Inspector', () => {
       expect(cell.resolutionDeg).toBe(0.4);
       expect(cell.pm25UgM3).toBeGreaterThan(0);
     }
+  });
+
+  it('updates useWebGisStore state when inspecting arbitrary coordinates and administrative areas', async () => {
+    const store = useWebGisStore.getState();
+    store.inspectMapCoordinate(21.0058, 105.8418);
+    const afterInspect = useWebGisStore.getState();
+    expect(afterInspect.inspectedPoint).not.toBeNull();
+    expect(afterInspect.inspectedPoint?.isWithinHanoi).toBe(true);
+
+    await store.inspectAdministrativeArea('Thanh Xuân');
+    const afterArea = useWebGisStore.getState();
+    expect(afterArea.selectedAreaStats).not.toBeNull();
+    expect(
+      afterArea.selectedAreaStats?.modeledBackground.spatialResolutionDeg
+    ).toBe(0.4);
   });
 });
 

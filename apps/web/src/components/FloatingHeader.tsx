@@ -5,23 +5,26 @@ import {
   BarChart3,
   Clock,
   Database,
+  RefreshCw,
   Search,
   ShieldCheck,
   UserCheck,
   Wind,
 } from 'lucide-react';
-import {
-  VERIFIED_ALERTS,
-  VERIFIED_DATA_SOURCES,
-  VERIFIED_HANOI_STATIONS,
-  VERIFIED_TIMELINE_SLOTS,
-} from '../data/verifiedHanoiSnapshot.js';
+import { VERIFIED_TIMELINE_SLOTS } from '../data/verifiedHanoiSnapshot.js';
 import { useWebGisStore, type UserRole } from '../store/useWebGisStore.js';
 
 export const FloatingHeader: React.FC = () => {
   const {
     searchQuery,
     setSearchQuery,
+    stations,
+    alerts,
+    dataSources,
+    backendConnected,
+    isSyncingBackend,
+    lastSyncedAtLocal,
+    syncWithPostgisBackend,
     selectStation,
     inspectMapCoordinate,
     timelineIndex,
@@ -36,16 +39,16 @@ export const FloatingHeader: React.FC = () => {
   >([]);
 
   const currentSlot = VERIFIED_TIMELINE_SLOTS[timelineIndex] ?? VERIFIED_TIMELINE_SLOTS[6];
-  const healthySourcesCount = VERIFIED_DATA_SOURCES.filter((s) => s.status === 'HEALTHY').length;
-  const activeAlertsCount = VERIFIED_ALERTS.filter((a) => a.status === 'ACTIVE').length;
+  const healthySourcesCount = dataSources.filter((s) => s.status === 'HEALTHY').length;
+  const activeAlertsCount = alerts.filter((a) => a.status === 'ACTIVE').length;
 
   const matchingStations = searchQuery.trim()
-    ? VERIFIED_HANOI_STATIONS.filter(
+    ? stations.filter(
         (s) =>
           s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           s.districtNameVi.toLowerCase().includes(searchQuery.toLowerCase()) ||
           s.administrativeAreaNameVi.toLowerCase().includes(searchQuery.toLowerCase())
-      ).slice(0, 5)
+      ).slice(0, 6)
     : [];
 
   const handleSearchChange = async (value: string) => {
@@ -194,6 +197,30 @@ export const FloatingHeader: React.FC = () => {
           </div>
         </div>
 
+        {/* Live Supabase PostGIS Sync Button */}
+        <button
+          type="button"
+          onClick={() => syncWithPostgisBackend()}
+          disabled={isSyncingBackend}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-sky-500/40 backdrop-blur-md text-xs font-medium text-sky-200 shadow-xl transition"
+          title={
+            lastSyncedAtLocal
+              ? `Đồng bộ PostGIS lần cuối lúc ${lastSyncedAtLocal}`
+              : 'Đồng bộ trực tiếp với cơ sở dữ liệu Supabase PostGIS'
+          }
+        >
+          <RefreshCw
+            className={`w-3.5 h-3.5 text-sky-400 ${
+              isSyncingBackend ? 'animate-spin' : ''
+            }`}
+          />
+          <span className="hidden md:inline">
+            {backendConnected
+              ? `PostGIS Live (${stations.length} trạm)`
+              : `Trạm Hà Nội (${stations.length})`}
+          </span>
+        </button>
+
         {/* Data Sources Status Button */}
         <button
           type="button"
@@ -204,7 +231,7 @@ export const FloatingHeader: React.FC = () => {
           <Database className="w-3.5 h-3.5 text-emerald-400" />
           <span className="hidden sm:inline">Nguồn dữ liệu:</span>
           <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">
-            {healthySourcesCount}/{VERIFIED_DATA_SOURCES.length} OK
+            {healthySourcesCount}/{dataSources.length} OK
           </span>
         </button>
 

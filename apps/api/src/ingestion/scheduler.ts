@@ -25,3 +25,4 @@ export function stopIngestionScheduler(): void {
     intervalHandle = null;
   }
 }
+
