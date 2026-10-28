@@ -20,7 +20,11 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { classifyPm25Level } from '@hanoi-pm25/shared';
+import {
+  analyzeMeteorologicalPm25Coupling,
+  classifyPm25Level,
+  computeExceedanceSummary,
+} from '@hanoi-pm25/shared';
 import { useWebGisStore, type DrawerTab } from '../store/useWebGisStore.js';
 
 export const AnalyticsDrawer: React.FC = () => {
@@ -36,6 +40,10 @@ export const AnalyticsDrawer: React.FC = () => {
     selectStation,
     comparedStationIds,
     toggleCompareStation,
+    savedFavoriteLocations,
+    removeFavoriteLocation,
+    updateFavoriteThreshold,
+    inspectMapCoordinate,
   } = useWebGisStore();
 
   if (!isDrawerOpen) return null;
@@ -43,6 +51,25 @@ export const AnalyticsDrawer: React.FC = () => {
   const focusStation = selectedStation ?? stations[0];
   const comparedStations = stations.filter((s) =>
     comparedStationIds.includes(s.id)
+  );
+
+  const exceedanceStats = computeExceedanceSummary(
+    focusStation.hourlyHistory
+      .map((h) => h.pm25UgM3)
+      .filter((v): v is number => typeof v === 'number'),
+    35.0
+  );
+
+  const couplingReport = analyzeMeteorologicalPm25Coupling(
+    focusStation.hourlyHistory
+      .filter((h): h is typeof h & { pm25UgM3: number } => typeof h.pm25UgM3 === 'number')
+      .map((h) => ({
+        timestampLabel: h.timeLocal,
+        pm25UgM3: h.pm25UgM3,
+        windSpeedKmh: h.windSpeedKmh ?? null,
+        humidityPct: h.humidityPct ?? null,
+        temperatureC: h.temperatureC ?? null,
+      }))
   );
 
   // Export verified station observations to CSV with UTF-8 BOM for Vietnamese Excel compatibility
@@ -196,6 +223,43 @@ export const AnalyticsDrawer: React.FC = () => {
                 </select>
               </div>
 
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800">
+                  <span className="text-[10px] text-slate-400 block">
+                    Trung bình / Độ lệch chuẩn (σ)
+                  </span>
+                  <strong className="text-sm text-emerald-300">
+                    {exceedanceStats.meanUgM3} ± {exceedanceStats.stdDevUgM3} µg/m³
+                  </strong>
+                </div>
+                <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800">
+                  <span className="text-[10px] text-slate-400 block">
+                    Cực đại / Phân vị P90
+                  </span>
+                  <strong className="text-sm text-amber-300">
+                    {exceedanceStats.maxUgM3} / {exceedanceStats.p90UgM3} µg/m³
+                  </strong>
+                </div>
+                <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800">
+                  <span className="text-[10px] text-slate-400 block">
+                    Vượt chuẩn WHO 2021 (&gt; 15 µg/m³)
+                  </span>
+                  <strong className="text-sm text-orange-300">
+                    {exceedanceStats.whoExceedancePct}% ({exceedanceStats.whoExceedanceCount}/
+                    {exceedanceStats.sampleCount} mẫu)
+                  </strong>
+                </div>
+                <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800">
+                  <span className="text-[10px] text-slate-400 block">
+                    Vượt QCVN 05:2023 (&gt; 50 µg/m³)
+                  </span>
+                  <strong className="text-sm text-rose-300">
+                    {exceedanceStats.qcvnExceedancePct}% ({exceedanceStats.qcvnExceedanceCount}/
+                    {exceedanceStats.sampleCount} mẫu)
+                  </strong>
+                </div>
+              </div>
+
               <div className="h-72 w-full bg-slate-950/70 rounded-2xl p-4 border border-slate-800">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={focusStation.hourlyHistory}>
@@ -236,11 +300,49 @@ export const AnalyticsDrawer: React.FC = () => {
                   Phân tích Mối liên hệ Khí tượng (Tốc độ gió, Độ ẩm, Nhiệt độ) và Nồng độ PM2.5
                 </h3>
                 <p className="text-slate-400 text-[11px] mt-0.5">
-                  * Lưu ý khoa học (Quy tắc 24): Biểu đồ thể hiện mối tương quan thống kê trong ngày
-                  tại Hà Nội (khi tốc độ gió tăng vào buổi trưa 12:00–14:00 lên 11–12 km/h, nồng độ
-                  PM2.5 giảm xuống; khi gió yếu lúc sáng sớm, PM2.5 tích tụ cao hơn). Không tự suy
-                  diễn nhân quả đơn biến khi chưa xét nguồn thải.
+                  {couplingReport.overallScientificInterpretationVi}
                 </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800">
+                  <span className="text-[10px] text-slate-400 block">
+                    Tương quan Pearson: PM2.5 & Tốc độ gió
+                  </span>
+                  <strong className="text-sm text-sky-300">
+                    r = {couplingReport.windSpeedCorrelation.r ?? 'N/A'} (
+                    {couplingReport.windSpeedCorrelation.directionVi})
+                  </strong>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    {couplingReport.windSpeedCorrelation.strengthLabelVi}
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800">
+                  <span className="text-[10px] text-slate-400 block">
+                    Tương quan Pearson: PM2.5 & Độ ẩm (RH)
+                  </span>
+                  <strong className="text-sm text-emerald-300">
+                    r = {couplingReport.humidityCorrelation.r ?? 'N/A'} (
+                    {couplingReport.humidityCorrelation.directionVi})
+                  </strong>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    {couplingReport.humidityCorrelation.strengthLabelVi}
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800">
+                  <span className="text-[10px] text-slate-400 block">
+                    Tương quan Pearson: PM2.5 & Nhiệt độ
+                  </span>
+                  <strong className="text-sm text-amber-300">
+                    r = {couplingReport.temperatureCorrelation.r ?? 'N/A'} (
+                    {couplingReport.temperatureCorrelation.directionVi})
+                  </strong>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    {couplingReport.temperatureCorrelation.strengthLabelVi}
+                  </p>
+                </div>
               </div>
 
               <div className="h-72 w-full bg-slate-950/70 rounded-2xl p-4 border border-slate-800">
@@ -347,10 +449,99 @@ export const AnalyticsDrawer: React.FC = () => {
           )}
 
           {activeDrawerTab === 'alerts' && (
-            <div className="space-y-3">
+            <div className="space-y-4">
+              {/* User Saved Favorite Locations & Custom PM2.5 Alert Thresholds */}
+              <div className="p-4 rounded-2xl bg-slate-950/90 border border-emerald-500/30 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-sm font-bold text-emerald-300">
+                      Địa điểm Yêu thích & Cảnh báo Ngưỡng Cá nhân (PostGIS user_favorite_locations)
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      Tự động ánh xạ tới trạm quan trắc gần nhất bằng toán tử khoảng cách PostGIS (&lt;-&gt;)
+                      và kiểm tra ngưỡng PM2.5 tùy chỉnh của bạn.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {savedFavoriteLocations.map((fav) => {
+                    const isExceeding = fav.latestPm25UgM3 > fav.customPm25ThresholdUgM3;
+                    return (
+                      <div
+                        key={fav.id}
+                        className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="font-bold text-white text-xs">{fav.labelName}</div>
+                            <div className="text-[11px] text-slate-400">
+                              Trạm gần nhất: {fav.nearestStationName} ({fav.nearestStationDistanceKm} km)
+                            </div>
+                          </div>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              isExceeding
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                                : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                            }`}
+                          >
+                            {isExceeding ? 'VƯỢT NGƯỠNG CÁ NHÂN' : 'TRONG NGƯỠNG CÁ NHÂN'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs pt-1">
+                          <span>
+                            Hiện tại:{' '}
+                            <strong className="text-emerald-300">{fav.latestPm25UgM3} µg/m³</strong>
+                          </span>
+                          <span>
+                            Ngưỡng cài đặt:{' '}
+                            <strong className="text-amber-300">
+                              {fav.customPm25ThresholdUgM3} µg/m³
+                            </strong>
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="range"
+                            min={15}
+                            max={100}
+                            step={5}
+                            value={fav.customPm25ThresholdUgM3}
+                            onChange={(e) =>
+                              updateFavoriteThreshold(fav.id, Number(e.target.value))
+                            }
+                            aria-label={`Điều chỉnh ngưỡng cho ${fav.labelName}`}
+                            className="flex-1 accent-emerald-400 cursor-pointer"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              inspectMapCoordinate(fav.latitude, fav.longitude);
+                              closeDrawer();
+                            }}
+                            className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 font-semibold text-[10px]"
+                          >
+                            Xem bản đồ
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeFavoriteLocation(fav.id)}
+                            className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-rose-500/20 text-rose-400 font-semibold text-[10px]"
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               <h3 className="text-sm font-bold text-white">
-                Danh sách Cảnh báo Ô nhiễm PM2.5 & Cảnh báo Kỹ thuật (Phân biệt Quan trắc vs Mô
-                hình)
+                Danh sách Cảnh báo Ô nhiễm PM2.5 & Cảnh báo Kỹ thuật Toàn Thành phố ({alerts.length})
               </h3>
               {alerts.map((alt) => (
                 <div

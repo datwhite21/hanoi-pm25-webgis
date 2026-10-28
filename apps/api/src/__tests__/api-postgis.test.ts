@@ -147,5 +147,61 @@ describe('Hanoi PM2.5 WebGIS Backend API & Live PostGIS Integration Tests', () =
       expect(src.lastStatus).toBe('HEALTHY');
     }
   });
+
+  it('GET /api/v1/analysis/correlation returns Pearson correlation r and WHO/QCVN exceedance statistics', async () => {
+    const res = await request(app).get('/api/v1/analysis/correlation?hours=24');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.exceedanceSummary.sampleCount).toBeGreaterThanOrEqual(5);
+    expect(res.body.data.couplingReport.windSpeedCorrelation.sampleSize).toBeGreaterThanOrEqual(5);
+    expect(typeof res.body.data.couplingReport.overallScientificInterpretationVi).toBe('string');
+  });
+
+  it('POST, GET, and DELETE /api/v1/user/favorites manages PostGIS user favorite points and evaluates custom PM2.5 thresholds', async () => {
+    const loginRes = await request(app).post('/api/v1/auth/login').send({
+      email: 'sinhvien@hanoi-pm25-gis.vn',
+      password: 'SinhVien@2026',
+    });
+    expect(loginRes.status).toBe(200);
+    const token = loginRes.body.data.accessToken as string;
+
+    const createRes = await request(app)
+      .post('/api/v1/user/favorites')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        labelName: 'Đại học Bách Khoa Hà Nội (Test Stage 6)',
+        latitude: 21.0058,
+        longitude: 105.8431,
+        customPm25ThresholdUgM3: 25,
+      });
+    expect(createRes.status).toBe(201);
+    const favId = createRes.body.data.id as string;
+    expect(favId).toBeTruthy();
+
+    const listRes = await request(app)
+      .get('/api/v1/user/favorites')
+      .set('Authorization', `Bearer ${token}`);
+    expect(listRes.status).toBe(200);
+    const found = (
+      listRes.body.data as Array<{
+        id: string;
+        nearestStation: {
+          name: string;
+          distanceKm: number | null;
+        } | null;
+        latestPm25UgM3: number | null;
+        isExceedingCustomThreshold: boolean;
+      }>
+    ).find((f) => f.id === favId);
+    expect(found).toBeDefined();
+    expect(found?.nearestStation?.name).toBeTruthy();
+    expect(found?.nearestStation?.distanceKm).toBeLessThan(2);
+
+    const deleteRes = await request(app)
+      .delete(`/api/v1/user/favorites/${favId}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(deleteRes.status).toBe(200);
+    expect(deleteRes.body.data.deletedId).toBe(favId);
+  });
 });
 

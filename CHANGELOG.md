@@ -3,15 +3,23 @@
 
 ---
 
+## [0.7.0] - 2026-10-28 — HOÀN THÀNH GIAI ĐOẠN 6: CẢNH BÁO Ô NHIỄM NÂNG CAO, ĐỊA ĐIỂM YÊU THÍCH POSTGIS & PHÂN TÍCH TƯƠNG QUAN KHÍ TƯỢNG – PM2.5
+
+### Đã thêm mới (Added)
+- Xây dựng mô-đun phân tích thống kê và tương quan khí tượng – PM2.5 [`packages/shared/src/analytics.ts`](packages/shared/src/analytics.ts):
+  - `calculatePearsonCorrelation`: Tính hệ số tương quan tuyến tính Pearson ($r$) kèm phân loại độ mạnh và chiều hướng (`NGHỊCH_BIẾN`, `ĐỒNG_BIẾN`, `KHÔNG_RÕ`).
+  - `analyzeMeteorologicalPm25Coupling`: Phân tích đồng thời mối liên hệ giữa PM2.5 (`µg/m³`) với tốc độ gió 10m (`km/h`), độ ẩm tương đối (`%`) và nhiệt độ (`°C`), kèm giải thích khoa học chuẩn mực về cơ chế khuếch tán khí quyển tại Hà Nội.
+  - `computeExceedanceSummary`: Tính toán phân phối (`Mean`, `Min`, `Max`, `StdDev`, `P90`) và tỷ lệ vượt ngưỡng WHO 2021 (`15 µg/m³`), QCVN 05:2023/BTNMT (`50 µg/m³`), cùng ngưỡng tùy chỉnh của người dùng.
+- Bổ sung API `GET /api/v1/analysis/correlation` trong [`apps/api/src/routes/publicRoutes.ts`](apps/api/src/routes/publicRoutes.ts) và nâng cấp `GET / POST / DELETE /api/v1/user/favorites` trong [`apps/api/src/routes/authAndUserRoutes.ts`](apps/api/src/routes/authAndUserRoutes.ts) sử dụng PostGIS `<->` và `ST_Contains`.
+- Nâng cấp [`PointInspectorCard.tsx`](apps/web/src/components/PointInspectorCard.tsx) và [`AnalyticsDrawer.tsx`](apps/web/src/components/AnalyticsDrawer.tsx) cho phép người dùng lưu địa điểm yêu thích với thanh trượt ngưỡng PM2.5 cá nhân và xem trực tiếp ma trận tương quan Pearson ($r$).
+- Kiểm thử: Vượt qua **22/22 bài kiểm thử tự động (`3 test files passed`)**.
+
+---
+
 ## [0.6.0] - 2026-10-28 — HOÀN THÀNH GIAI ĐOẠN 5: TÍCH HỢP WEBGIS FRONTEND VỚI BACKEND POSTGIS API & TRUY VẤN KHÔNG GIAN THỜI GIAN THỰC
 
 ### Đã thêm mới (Added)
-- Xây dựng lớp dịch vụ [`apps/web/src/services/apiClient.ts`](apps/web/src/services/apiClient.ts) kết nối trực tiếp Frontend (`@hanoi-pm25/web`) với Backend REST API (`@hanoi-pm25/api`) và cơ sở dữ liệu Supabase PostGIS:
-  - Đồng bộ trực tiếp toàn bộ 57 trạm quan trắc trong địa giới Hà Nội (`fetchLiveStationsFromApi`).
-  - Truy vấn không gian tại tọa độ bất kỳ (`fetchLivePointInspectionFromApi` -> `/api/v1/gis/inspect-point` với `ST_Contains`, `ST_Distance`, `ST_DWithin`).
-  - Truy vấn thống kê không gian theo đơn vị hành chính (`fetchLiveAreaStatisticsFromApi` -> `/api/v1/areas/:id/statistics` với `ST_Within` & `ST_Intersects`).
-  - Đồng bộ danh sách 10 cảnh báo hoạt động (`fetchLiveAlertsFromApi`) và trạng thái 4 nguồn dữ liệu (`fetchLiveDataSourcesFromApi`).
-- Nâng cấp Zustand Store [`apps/web/src/store/useWebGisStore.ts`](apps/web/src/store/useWebGisStore.ts), [`MapCanvas.tsx`](apps/web/src/components/MapCanvas.tsx), [`FloatingHeader.tsx`](apps/web/src/components/FloatingHeader.tsx), [`PointInspectorCard.tsx`](apps/web/src/components/PointInspectorCard.tsx), và [`AnalyticsDrawer.tsx`](apps/web/src/components/AnalyticsDrawer.tsx).
+- Xây dựng lớp dịch vụ [`apps/web/src/services/apiClient.ts`](apps/web/src/services/apiClient.ts) kết nối trực tiếp Frontend (`@hanoi-pm25/web`) với Backend REST API (`@hanoi-pm25/api`) và cơ sở dữ liệu Supabase PostGIS.
 - Kiểm thử: Vượt qua **18/18 bài kiểm thử Vitest + Supertest**.
 
 ---

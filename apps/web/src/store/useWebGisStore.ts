@@ -34,6 +34,19 @@ export type DrawerTab =
   | 'sources';
 export type UserRole = 'GUEST' | 'USER' | 'ADMIN';
 
+export interface SavedFavoriteLocation {
+  id: string;
+  labelName: string;
+  latitude: number;
+  longitude: number;
+  districtNameVi: string;
+  nearestStationName: string;
+  nearestStationDistanceKm: number;
+  latestPm25UgM3: number;
+  customPm25ThresholdUgM3: number;
+  enableAlert: boolean;
+}
+
 interface WebGisState {
   activeLayer: ActiveMapLayer;
   showStations: boolean;
@@ -64,6 +77,7 @@ interface WebGisState {
 
   userRole: UserRole;
   favoriteStationIds: string[];
+  savedFavoriteLocations: SavedFavoriteLocation[];
 
   setActiveLayer: (layer: ActiveMapLayer) => void;
   toggleStations: () => void;
@@ -89,6 +103,12 @@ interface WebGisState {
   toggleCompareStation: (stationId: string) => void;
   setUserRole: (role: UserRole) => void;
   toggleFavoriteStation: (stationId: string) => void;
+  addFavoriteLocation: (
+    labelName: string,
+    customThresholdUgM3?: number
+  ) => void;
+  removeFavoriteLocation: (id: string) => void;
+  updateFavoriteThreshold: (id: string, thresholdUgM3: number) => void;
 }
 
 export const useWebGisStore = create<WebGisState>((set, get) => ({
@@ -121,6 +141,32 @@ export const useWebGisStore = create<WebGisState>((set, get) => ({
 
   userRole: 'GUEST',
   favoriteStationIds: ['openaq-4946812', 'openaq-4946813'],
+  savedFavoriteLocations: [
+    {
+      id: 'fav-bk-hanoi',
+      labelName: 'Khuôn viên ĐHBK Hà Nội — Bạch Mai',
+      latitude: 21.0058,
+      longitude: 105.8418,
+      districtNameVi: 'Hai Bà Trưng',
+      nearestStationName: 'Số 1 đường Giải Phóng - P. Bạch Mai (ĐHBK)',
+      nearestStationDistanceKm: 0.08,
+      latestPm25UgM3: 44.28,
+      customPm25ThresholdUgM3: 35.0,
+      enableAlert: true,
+    },
+    {
+      id: 'fav-nhan-chinh',
+      labelName: 'Hồ điều hòa Nhân Chính — Thanh Xuân',
+      latitude: 21.0031,
+      longitude: 105.7947,
+      districtNameVi: 'Thanh Xuân',
+      nearestStationName: 'Công viên Nhân Chính - Khuất Duy Tiến',
+      nearestStationDistanceKm: 0.05,
+      latestPm25UgM3: 33.6,
+      customPm25ThresholdUgM3: 35.0,
+      enableAlert: true,
+    },
+  ],
 
   setActiveLayer: (layer) => set({ activeLayer: layer }),
   toggleStations: () => set((s) => ({ showStations: !s.showStations })),
@@ -320,5 +366,45 @@ export const useWebGisStore = create<WebGisState>((set, get) => ({
       favoriteStationIds: s.favoriteStationIds.includes(stationId)
         ? s.favoriteStationIds.filter((id) => id !== stationId)
         : [...s.favoriteStationIds, stationId],
+    })),
+
+  addFavoriteLocation: (labelName, customThresholdUgM3 = 35.0) =>
+    set((s) => {
+      const pt = s.inspectedPoint;
+      if (!pt) return {};
+      const nearestSt = pt.nearestActiveStation?.station ?? s.stations[0];
+      const distKm = pt.nearestActiveStation?.distanceKm ?? 1.2;
+      const latestPm25 =
+        nearestSt.latestPm25UgM3 ?? pt.modelGridCell?.pm25UgM3 ?? 38.0;
+
+      const newFav: SavedFavoriteLocation = {
+        id: `fav-${Date.now()}`,
+        labelName: labelName.trim() || `${pt.districtNameVi} (${pt.latitude.toFixed(3)}°N)`,
+        latitude: pt.latitude,
+        longitude: pt.longitude,
+        districtNameVi: pt.districtNameVi,
+        nearestStationName: nearestSt.name,
+        nearestStationDistanceKm: distKm,
+        latestPm25UgM3: latestPm25,
+        customPm25ThresholdUgM3: customThresholdUgM3,
+        enableAlert: true,
+      };
+      return {
+        savedFavoriteLocations: [newFav, ...s.savedFavoriteLocations],
+      };
+    }),
+
+  removeFavoriteLocation: (id) =>
+    set((s) => ({
+      savedFavoriteLocations: s.savedFavoriteLocations.filter(
+        (f) => f.id !== id
+      ),
+    })),
+
+  updateFavoriteThreshold: (id, thresholdUgM3) =>
+    set((s) => ({
+      savedFavoriteLocations: s.savedFavoriteLocations.map((f) =>
+        f.id === id ? { ...f, customPm25ThresholdUgM3: thresholdUgM3 } : f
+      ),
     })),
 }));

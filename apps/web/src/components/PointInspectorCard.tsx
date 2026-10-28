@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
+  BookmarkPlus,
   Compass,
   Grid,
   Info,
@@ -17,7 +18,12 @@ export const PointInspectorCard: React.FC = () => {
     inspectAdministrativeArea,
     clearInspection,
     selectStation,
+    addFavoriteLocation,
+    openDrawer,
   } = useWebGisStore();
+
+  const [customThreshold, setCustomThreshold] = useState<number>(35);
+  const [savedNotice, setSavedNotice] = useState<boolean>(false);
 
   if (!inspectedPoint) return null;
 
@@ -206,6 +212,54 @@ export const PointInspectorCard: React.FC = () => {
             </p>
           </div>
         )}
+      </div>
+
+      {/* 4. Save Coordinate to User Favorite Locations with Custom Alert Threshold */}
+      <div className="mt-3 p-3 rounded-xl bg-slate-950/80 border border-emerald-500/30 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-semibold text-emerald-300 flex items-center gap-1">
+            <BookmarkPlus className="w-3.5 h-3.5" />
+            Lưu Vị trí Yêu thích & Ngưỡng Cảnh báo Cá nhân
+          </span>
+          <span className="text-[10px] font-bold text-amber-300">
+            Ngưỡng: {customThreshold} µg/m³
+          </span>
+        </div>
+
+        <input
+          type="range"
+          min={15}
+          max={100}
+          step={5}
+          value={customThreshold}
+          onChange={(e) => setCustomThreshold(Number(e.target.value))}
+          aria-label="Ngưỡng cảnh báo PM2.5 tùy chỉnh"
+          className="w-full accent-emerald-400 cursor-pointer"
+        />
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              addFavoriteLocation(
+                `${inspectedPoint.districtNameVi} (${inspectedPoint.latitude.toFixed(3)}°N)`,
+                customThreshold
+              );
+              setSavedNotice(true);
+              setTimeout(() => setSavedNotice(false), 2500);
+            }}
+            className="flex-1 py-1.5 px-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-[11px] transition"
+          >
+            {savedNotice ? '✓ Đã lưu vào Địa điểm Yêu thích!' : '+ Lưu vị trí & Nhận cảnh báo'}
+          </button>
+          <button
+            type="button"
+            onClick={() => openDrawer('alerts')}
+            className="py-1.5 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-[11px]"
+          >
+            Quản lý →
+          </button>
+        </div>
       </div>
     </section>
   );

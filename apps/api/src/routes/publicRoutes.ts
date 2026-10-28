@@ -4,6 +4,8 @@ import {
   classifyPm25Level,
   calculateVnAqiFromPm25,
   calculateNowCastPm25,
+  analyzeMeteorologicalPm25Coupling,
+  computeExceedanceSummary,
 } from '@hanoi-pm25/shared';
 import { dbQuery, checkDbHealth } from '../db/pool.js';
 import { ApiError, sendSuccess } from '../middleware/errorHandler.js';
@@ -1217,4 +1219,89 @@ publicRouter.get('/v1/data-sources/status', async (_req, res, next) => {
     next(err);
   }
 });
+
+// -----------------------------------------------------------------------------
+// 13. GET /api/v1/analysis/correlation
+// Computes Pearson correlation (r) between hourly PM2.5 and meteorological variables
+// -----------------------------------------------------------------------------
+publicRouter.get('/v1/analysis/correlation', async (req, res, next) => {
+  try {
+    const querySchema = z.object({
+      hours: z.coerce.number().int().min(4).max(168).default(24),
+      custom_threshold: z.coerce.number().min(5).max(300).default(35.0),
+    });
+    const { hours, custom_threshold } = querySchema.parse(req.query);
+
+    const pm25Res = await dbQuery<{
+      bucket_utc: string;
+      avg_pm25: number;
+    }>(
+      `
+      SELECT
+        date_trunc('hour', po.measured_at_utc) AS bucket_utc,
+        ROUND(AVG(po.pm25_ugm3)::numeric, 2)::float AS avg_pm25
+      FROM pm25_observations po
+      JOIN monitoring_stations ms ON ms.id = po.station_id
+      WHERE po.quality_flag = 'VALID'
+        AND po.value_origin = 'DIRECT_CONCENTRATION'
+        AND ms.is_within_hanoi = TRUE
+      GROUP BY bucket_utc
+      ORDER BY bucket_utc DESC
+      LIMIT $1
+      `,
+      [hours]
+    );
+
+    const wxRes = await dbQuery<{
+      bucket_utc: string;
+      wind_speed_kmh: number | null;
+      relative_humidity_pct: number | null;
+      temperature_c: number | null;
+    }>(
+      `
+      SELECT
+        date_trunc('hour', observed_at_utc) AS bucket_utc,
+        ROUND(AVG(wind_speed_kmh)::numeric, 1)::float AS wind_speed_kmh,
+        ROUND(AVG(relative_humidity_pct)::numeric, 0)::float AS relative_humidity_pct,
+        ROUND(AVG(temperature_c)::numeric, 1)::float AS temperature_c
+      FROM weather_data
+      GROUP BY bucket_utc
+      ORDER BY bucket_utc DESC
+      LIMIT $1
+      `,
+      [hours * 2]
+    );
+
+    const wxByIdx = wxRes.rows;
+    const pairedSamples = pm25Res.rows
+      .slice()
+      .reverse()
+      .map((p, idx) => {
+        const w = wxByIdx[idx % Math.max(1, wxByIdx.length)];
+        return {
+          timestampLabel: new Date(p.bucket_utc).toISOString(),
+          pm25UgM3: Number(p.avg_pm25),
+          windSpeedKmh: w?.wind_speed_kmh ?? null,
+          humidityPct: w?.relative_humidity_pct ?? null,
+          temperatureC: w?.temperature_c ?? null,
+        };
+      });
+
+    const couplingReport = analyzeMeteorologicalPm25Coupling(pairedSamples);
+    const exceedanceSummary = computeExceedanceSummary(
+      pairedSamples.map((s) => s.pm25UgM3),
+      custom_threshold
+    );
+
+    sendSuccess(res, {
+      hoursAnalyzed: hours,
+      couplingReport,
+      exceedanceSummary,
+      pairedSeries: pairedSamples,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 

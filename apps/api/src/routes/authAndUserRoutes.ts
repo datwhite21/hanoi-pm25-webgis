@@ -166,10 +166,20 @@ authAndUserRouter.get(
           ufl.created_at_utc,
           ms.external_station_id AS nearest_station_ext_id,
           ms.name AS nearest_station_name,
+          ROUND((ST_Distance(ufl.geom::geography, ms.geom::geography) / 1000.0)::numeric, 2)::float AS distance_km,
+          obs.pm25_ugm3 AS latest_pm25_ugm3,
           aa.code AS area_code,
           aa.name_vi AS area_name_vi
         FROM user_favorite_locations ufl
         LEFT JOIN monitoring_stations ms ON ms.id = ufl.nearest_station_id
+        LEFT JOIN LATERAL (
+          SELECT po.pm25_ugm3
+          FROM pm25_observations po
+          WHERE po.station_id = ms.id
+            AND po.quality_flag = 'VALID'
+          ORDER BY po.measured_at_utc DESC
+          LIMIT 1
+        ) obs ON TRUE
         LEFT JOIN administrative_areas aa ON aa.id = ufl.administrative_area_id
         WHERE ufl.user_id = $1::uuid
         ORDER BY ufl.created_at_utc DESC
@@ -179,29 +189,38 @@ authAndUserRouter.get(
 
       sendSuccess(
         res,
-        result.rows.map((r) => ({
-          id: r.id,
-          labelName: r.label_name,
-          coordinates: {
-            latitude: Number(r.latitude),
-            longitude: Number(r.longitude),
-          },
-          customPm25ThresholdUgM3: Number(r.custom_pm25_threshold_ugm3),
-          enableAlert: r.enable_alert,
-          nearestStation: r.nearest_station_ext_id
-            ? {
-                externalStationId: r.nearest_station_ext_id,
-                name: r.nearest_station_name,
-              }
-            : null,
-          administrativeArea: r.area_code
-            ? {
-                code: r.area_code,
-                nameVi: r.area_name_vi,
-              }
-            : null,
-          createdAtUtc: r.created_at_utc,
-        }))
+        result.rows.map((r) => {
+          const threshold = Number(r.custom_pm25_threshold_ugm3);
+          const latestPm25 =
+            r.latest_pm25_ugm3 !== null ? Number(r.latest_pm25_ugm3) : null;
+          return {
+            id: r.id,
+            labelName: r.label_name,
+            coordinates: {
+              latitude: Number(r.latitude),
+              longitude: Number(r.longitude),
+            },
+            customPm25ThresholdUgM3: threshold,
+            enableAlert: r.enable_alert,
+            latestPm25UgM3: latestPm25,
+            isExceedingCustomThreshold:
+              latestPm25 !== null ? latestPm25 > threshold : false,
+            nearestStation: r.nearest_station_ext_id
+              ? {
+                  externalStationId: r.nearest_station_ext_id,
+                  name: r.nearest_station_name,
+                  distanceKm: r.distance_km !== null ? Number(r.distance_km) : null,
+                }
+              : null,
+            administrativeArea: r.area_code
+              ? {
+                  code: r.area_code,
+                  nameVi: r.area_name_vi,
+                }
+              : null,
+            createdAtUtc: r.created_at_utc,
+          };
+        })
       );
     } catch (err) {
       next(err);
@@ -232,7 +251,10 @@ authAndUserRouter.post(
         nearest_st AS (
           SELECT ms.id
           FROM monitoring_stations ms, pt
-          ORDER BY ms.geom::geography <-> pt.geom::geography
+          WHERE ms.is_within_hanoi = TRUE
+          ORDER BY
+            CASE WHEN ms.freshness_status = 'FRESH' THEN 0 ELSE 1 END,
+            ms.geom::geography <-> pt.geom::geography
           LIMIT 1
         ),
         containing_aa AS (
@@ -276,6 +298,38 @@ authAndUserRouter.post(
       );
 
       sendSuccess(res, insertRes.rows[0], undefined, 201);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+authAndUserRouter.delete(
+  '/v1/user/favorites/:id',
+  requireAuth,
+  async (req, res, next) => {
+    try {
+      const favId = req.params.id;
+      const userId = req.user!.sub;
+
+      const delRes = await dbQuery(
+        `
+        DELETE FROM user_favorite_locations
+        WHERE id = $1::uuid AND user_id = $2::uuid
+        RETURNING id
+        `,
+        [favId, userId]
+      );
+
+      if (delRes.rows.length === 0) {
+        throw new ApiError(
+          404,
+          'FAVORITE_NOT_FOUND',
+          'Không tìm thấy địa điểm yêu thích cần xóa.'
+        );
+      }
+
+      sendSuccess(res, { deletedId: favId });
     } catch (err) {
       next(err);
     }

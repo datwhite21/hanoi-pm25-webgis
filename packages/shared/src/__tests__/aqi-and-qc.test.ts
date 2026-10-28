@@ -8,6 +8,11 @@ import {
   evaluateFreshnessStatus,
   evaluatePm25QualityFlag,
 } from '../aqi.js';
+import {
+  analyzeMeteorologicalPm25Coupling,
+  calculatePearsonCorrelation,
+  computeExceedanceSummary,
+} from '../analytics.js';
 
 describe('@hanoi-pm25/shared — Scientific AQI, NowCast & Quality Control', () => {
   it('classifies PM2.5 concentration accurately against QCVN 05:2023 (50 ug/m3) and WHO (15 ug/m3)', () => {
@@ -89,5 +94,34 @@ describe('@hanoi-pm25/shared — Scientific AQI, NowCast & Quality Control', () 
     const unisAqi122 = convertUsAqiToApproximatePm25UgM3(122);
     expect(unisAqi122).toBeGreaterThan(43);
     expect(unisAqi122).toBeLessThan(45);
+  });
+
+  it('calculates Pearson correlation (r) and meteorological coupling between PM2.5 and wind speed', () => {
+    // When wind speed increases from 6 to 12 km/h, PM2.5 drops from 45 to 31 ug/m3 -> negative correlation
+    const corr = calculatePearsonCorrelation(
+      [45.0, 42.0, 39.0, 35.0, 31.0],
+      [6.0, 7.5, 9.0, 10.8, 12.2],
+      'Tốc độ gió'
+    );
+    expect(corr.r).not.toBeNull();
+    expect(corr.r!).toBeLessThan(-0.95);
+    expect(corr.directionVi).toBe('NGHỊCH_BIẾN');
+
+    const report = analyzeMeteorologicalPm25Coupling([
+      { timestampLabel: '08:00', pm25UgM3: 45, windSpeedKmh: 6.0, humidityPct: 82, temperatureC: 24 },
+      { timestampLabel: '10:00', pm25UgM3: 40, windSpeedKmh: 8.5, humidityPct: 75, temperatureC: 26 },
+      { timestampLabel: '12:00', pm25UgM3: 34, windSpeedKmh: 11.2, humidityPct: 66, temperatureC: 28 },
+      { timestampLabel: '14:00', pm25UgM3: 31, windSpeedKmh: 12.0, humidityPct: 64, temperatureC: 29 },
+    ]);
+    expect(report.windSpeedCorrelation.r!).toBeLessThan(-0.9);
+    expect(report.overallScientificInterpretationVi).toContain('không khẳng định nhân quả đơn biến');
+  });
+
+  it('computes exceedance statistics against WHO (15 ug/m3), QCVN 05:2023 (50 ug/m3), and custom threshold', () => {
+    const summary = computeExceedanceSummary([12.0, 33.6, 44.28, 64.3], 35.0);
+    expect(summary.sampleCount).toBe(4);
+    expect(summary.whoExceedanceCount).toBe(3); // 33.6, 44.28, 64.3 > 15
+    expect(summary.qcvnExceedanceCount).toBe(1); // 64.3 > 50
+    expect(summary.customExceedanceCount).toBe(2); // 44.28, 64.3 > 35.0
   });
 });
