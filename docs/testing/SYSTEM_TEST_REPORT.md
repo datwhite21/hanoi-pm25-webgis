@@ -54,3 +54,4 @@ Bằng cách cấu hình chiến lược tách gói (`build.rollupOptions.output
 2. **Kiểm tra Biên Đầu vào (Input Validation):** Mọi tham số tọa độ (`lat`, `lon`), bán kính (`radius_km`), số giờ (`hours`) và ngưỡng cảnh báo đều được kiểm tra bằng lược đồ `Zod` trước khi chạm tới cơ sở dữ liệu (trả về `400 VALIDATION_ERROR` khi tọa độ nằm ngoài phạm vi hợp lệ).
 3. **Xác thực JWT & Phân quyền RBAC (`GUEST` / `USER` / `ADMIN`):** Mật khẩu người dùng được băm bằng `Blowfish (bcrypt / pgcrypto crypt)` trong PostgreSQL; các API quản trị (`/api/v1/admin/*`) bắt buộc đi qua middleware `requireRole('ADMIN')` và ghi vết bất biến vào bảng `audit_logs`.
 4. **Bảo vệ Khóa Bí mật (Secret Hygiene):** Các thông tin nhạy cảm (`DATABASE_URL`, `OPENAQ_API_KEY`, `WAQI_API_TOKEN`, `JWT_SECRET`) chỉ nằm trong `.env` cục bộ (đã loại trừ trong `.gitignore`), tuyệt đối không xuất hiện trong mã nguồn hoặc gói build Frontend.
+

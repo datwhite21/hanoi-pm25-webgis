@@ -1,0 +1,40 @@
+# =============================================================================
+# HANOI PM2.5 WEBGIS — DOCKER COMPOSE FOR LOCAL POSTGIS & API CONTAINERIZATION
+# =============================================================================
+services:
+  postgis:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: hanoi-pm25-postgis
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: hanoi_pm25_gis
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-HanoiPostgis2026}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+      - ./database/migrations/001_init_postgis_schema.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      - ./database/seeds/001_seed_hanoi_base.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d hanoi_pm25_gis"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hanoi-pm25-api
+    restart: unless-stopped
+    depends_on:
+      postgis:
+        condition: service_healthy
+    env_file:
+      - .env
+    ports:
+      - "4000:4000"
+
+volumes:
+  postgis_data:

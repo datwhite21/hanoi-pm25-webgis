@@ -1,0 +1,63 @@
+name: Hanoi PM2.5 WebGIS — CI & Scheduled Data Ingestion
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Runs every 30 minutes to keep Supabase PostGIS updated even if free-tier backend sleeps
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ci-verify-and-build:
+    name: TypeScript Check, Unit Tests & Production Build
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install workspace dependencies
+        run: npm install
+
+      - name: Run TypeScript static typecheck across all workspaces
+        run: npm run typecheck
+
+      - name: Run unit & store tests
+        run: npx vitest run packages/shared apps/web
+
+      - name: Build production bundles (@hanoi-pm25/shared, @hanoi-pm25/api, @hanoi-pm25/web)
+        run: npm run build
+
+  scheduled-postgis-ingestion:
+    name: Live Hanoi PM2.5 Data Ingestion to Supabase PostGIS
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install workspace dependencies
+        run: npm install
+
+      - name: Run live OpenAQ v3, WAQI & Open-Meteo ingestion into Supabase PostGIS
+        if: env.DATABASE_URL != ''
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
+          WAQI_API_TOKEN: ${{ secrets.WAQI_API_TOKEN }}
+        run: npm run ingest:now

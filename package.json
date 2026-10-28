@@ -10,6 +10,7 @@
   "scripts": {
     "dev:web": "npm --workspace=@hanoi-pm25/web run dev",
     "dev:api": "npm --workspace=@hanoi-pm25/api run dev",
+    "start:api": "npm --workspace=@hanoi-pm25/api run start",
     "build:shared": "npm --workspace=@hanoi-pm25/shared run build",
     "build:api": "npm --workspace=@hanoi-pm25/api run build",
     "build:web": "npm --workspace=@hanoi-pm25/web run build",
@@ -18,6 +19,7 @@
     "typecheck": "npm --workspace=@hanoi-pm25/shared run typecheck && npm --workspace=@hanoi-pm25/api run typecheck && npm --workspace=@hanoi-pm25/web run typecheck",
     "db:migrate": "node scripts/migrate-and-verify-postgis.mjs",
     "ingest:now": "npm --workspace=@hanoi-pm25/api run ingest:now",
+    "benchmark:postgis": "node scripts/benchmark-postgis-and-security.mjs",
     "verify:sources": "node scripts/verify-data-sources.mjs"
   },
   "devDependencies": {

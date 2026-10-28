@@ -3,17 +3,16 @@
 
 ---
 
-## [0.9.0] - 2026-10-28 — HOÀN THÀNH GIAI ĐOẠN 8: KIỂM THỬ TOÀN DIỆN, ĐO KIỂM HIỆU NĂNG POSTGIS (`EXPLAIN ANALYZE`) & TỐI ƯU GÓI BUILD (`manualChunks`)
+## [0.9.5] - 2026-10-28 — HOÀN THÀNH GIAI ĐOẠN 9: CẤU HÌNH TRIỂN KHAI CLOUD CÔNG KHAI (VERCEL / RENDER / SUPABASE), DOCKER & GITHUB ACTIONS CI/CD
 
 ### Đã thêm mới (Added)
-- Cấu hình tách gói (`manualChunks`) trong [`apps/web/vite.config.ts`](apps/web/vite.config.ts) thành `vendor-maplibre`, `vendor-react`, `vendor-icons`, và `index`, loại bỏ hoàn toàn cảnh báo kích thước chunk.
-- Xây dựng kịch bản đo kiểm hiệu năng không gian PostGIS [`scripts/benchmark-postgis-and-security.mjs`](scripts/benchmark-postgis-and-security.mjs) và lưu kết quả thực thi `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` tại [`scripts/postgis-benchmark-results.json`](scripts/postgis-benchmark-results.json).
-- Bổ sung kiểm thử bảo mật chống SQL Injection, kiểm tra biên Zod và xác thực JWT trong [`apps/api/src/__tests__/api-postgis.test.ts`](apps/api/src/__tests__/api-postgis.test.ts) (**25/25 bài kiểm thử thành công**).
-- Xuất bản báo cáo kiểm thử toàn diện [`docs/testing/SYSTEM_TEST_REPORT.md`](docs/testing/SYSTEM_TEST_REPORT.md).
+- Tạo cấu hình triển khai Frontend [`vercel.json`](vercel.json) và Backend [`render.yaml`](render.yaml), [`Dockerfile`](Dockerfile), [`docker-compose.yml`](docker-compose.yml).
+- Tạo workflow GitHub Actions [`.github/workflows/ci-and-ingest.yml`](.github/workflows/ci-and-ingest.yml) tự động kiểm thử CI và thu thập dữ liệu định kỳ.
+- Xuất bản hướng dẫn triển khai và vận hành [`docs/deployment/DEPLOYMENT_AND_OPERATIONS_GUIDE.md`](docs/deployment/DEPLOYMENT_AND_OPERATIONS_GUIDE.md).
 
 ---
 
-## [0.8.0] - 2026-10-28 — HOÀN THÀNH GIAI ĐOẠN 7: QUẢN TRỊ HỆ THỐNG, GIAO DIỆN PHÂN QUYỀN RBAC (`ADMIN` / `USER` / `GUEST`) & NHẬT KÝ KIỂM TOÁN (`audit_logs`)
+## [0.9.0] - 2026-10-28 — HOÀN THÀNH GIAI ĐOẠN 8: KIỂM THỬ TOÀN DIỆN, ĐO KIỂM HIỆU NĂNG POSTGIS (`EXPLAIN ANALYZE`) & TỐI ƯU GÓI BUILD (`manualChunks`)
 
 ### Đã thêm mới (Added)
-- Xây dựng Trung tâm Quản trị Hệ thống & Phân quyền RBAC [`apps/web/src/components/AdminDashboardModal.tsx`](apps/web/src/components/AdminDashboardModal.tsx).
+- Tối ưu hóa gói build `manualChunks`, đo kiểm `EXPLAIN ANALYZE` trên Supabase PostGIS và vượt qua 25/25 bài kiểm thử tự động.
