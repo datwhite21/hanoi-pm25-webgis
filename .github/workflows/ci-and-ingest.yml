@@ -61,3 +61,4 @@ jobs:
           OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
           WAQI_API_TOKEN: ${{ secrets.WAQI_API_TOKEN }}
         run: npm run ingest:now
+

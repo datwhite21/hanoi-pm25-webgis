@@ -120,3 +120,4 @@ Trong trường hợp phòng bảo vệ đồ án mất kết nối Internet qu�
 docker compose up -d --build
 ```
 Container `hanoi-pm25-postgis` sẽ tự động chạy [`001_init_postgis_schema.sql`](../../database/migrations/001_init_postgis_schema.sql) và [`001_seed_hanoi_base.sql`](../../database/seeds/001_seed_hanoi_base.sql) ngay khi khởi tạo lần đầu.
+
