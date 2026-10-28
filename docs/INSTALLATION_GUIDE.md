@@ -68,3 +68,4 @@ Kết quả in ra `11.19.1` là thành công.
 Theo đúng nguyên tắc *"Không yêu cầu cài đặt toàn bộ ứng dụng cùng lúc nếu chưa cần sử dụng"*, các dịch vụ sau sẽ được tôi hướng dẫn chi tiết từng bước khi bước vào đúng giai đoạn tương ứng:
 - **Giai đoạn 3 (Backend & Database):** Tạo project miễn phí trên **Supabase** (https://supabase.com/) và bật extension **PostGIS**.
 - **Giai đoạn 9 (Triển khai công khai):** Kết nối GitHub với **Vercel** (Frontend) và **Render** (Backend).
+

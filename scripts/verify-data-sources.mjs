@@ -113,10 +113,43 @@ async function main() {
     `https://api.openaq.org/v3/locations?coordinates=${HANOI_CENTER.lat},${HANOI_CENTER.lon}&radius=25000&parameters_id=2&limit=100`,
     { headers: openAqHeaders }
   );
+
+  // Fetch latest PM2.5 measurements for stations active in 2026
+  const activeStationsLatest = [];
+  if (openAqKey && Array.isArray(openAqRes.jsonData?.results)) {
+    const recentStations = openAqRes.jsonData.results.filter((st) =>
+      st.datetimeLast?.utc?.startsWith('2026-10-')
+    );
+    for (const st of recentStations) {
+      const pm25Sensor = st.sensors?.find((s) => s.parameter?.name === 'pm25');
+      const latestRes = await safeFetch(
+        `OpenAQ Latest for ${st.name} (${st.id})`,
+        `https://api.openaq.org/v3/locations/${st.id}/latest`,
+        { headers: openAqHeaders }
+      );
+      const pm25Reading = latestRes.jsonData?.results?.find(
+        (m) => m.sensorsId === pm25Sensor?.id
+      );
+      activeStationsLatest.push({
+        locationId: st.id,
+        name: st.name,
+        provider: st.provider?.name,
+        isMonitor: st.isMonitor,
+        coordinates: st.coordinates,
+        pm25SensorId: pm25Sensor?.id,
+        latestPm25UgM3: pm25Reading?.value ?? null,
+        measuredAtUtc: pm25Reading?.datetime?.utc ?? st.datetimeLast?.utc ?? null,
+        measuredAtLocal: pm25Reading?.datetime?.local ?? st.datetimeLast?.local ?? null,
+      });
+    }
+  }
+
   report.sources.openaq_v3 = {
     ...openAqRes,
     apiKeyProvided: Boolean(openAqKey),
     stationCountFound: openAqRes.jsonData?.results?.length ?? null,
+    activeStationsTodayCount: activeStationsLatest.length,
+    activeStationsLatest,
   };
 
   console.log('5. Checking WAQI API (https://api.waqi.info)...');

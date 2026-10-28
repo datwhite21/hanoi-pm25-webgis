@@ -67,3 +67,4 @@
 - Không tự chế tạo phần cứng cảm biến IoT vật lý (hệ thống thu thập qua API chuẩn và hỗ trợ chuẩn webhook/import cho trạm mới).
 - Không thực hiện nội suy không gian giả tạo ở những vùng không có trạm đo để đánh lừa người xem về độ chi tiết cấp xã/phường.
 - Không cào (scrape) trái phép các website không cấp quyền khai thác tự động.
+

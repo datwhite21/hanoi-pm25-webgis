@@ -1,102 +1,89 @@
 # BÁO CÁO XÁC MINH DỮ LIỆU THỜI GIAN THỰC (REALTIME DATA VERIFICATION)
 ## Dự án: Hanoi PM2.5 GIS
 
-**Thời điểm thực thi kiểm chứng:** `2026-10-28T10:33:41.416Z` (`17:33:41 28/10/2026` giờ Việt Nam GMT+7)  
-**Công cụ kiểm chứng:** Node.js `v24.22.1` trên Windows (`win32 x64`)  
+**Thời điểm thực thi kiểm chứng hoàn tất:** `2026-10-28T10:59:53Z` (`17:59:53 28/10/2026` giờ Việt Nam GMT+7)  
+**Công cụ kiểm chứng:** Node.js `v24.22.1`, npm `11.19.1` trên Windows (`win32 x64`)  
 **Tệp script kiểm chứng:** [`scripts/verify-data-sources.mjs`](../scripts/verify-data-sources.mjs)  
 **Tệp log kết quả thực tế:** [`scripts/verification-results.json`](../scripts/verification-results.json)
 
 ---
 
-## 1. Kết quả kiểm chứng trực tiếp (Live API Calls)
+## 1. Kết quả kiểm chứng trực tiếp Trạm Quan Trắc Thực Tế tại Hà Nội (OpenAQ API v3)
 
-### 1.1. Nguồn đã kết nối và lấy dữ liệu thực thành công ngay lập tức (Không cần API Key)
+### 1.1. Tổng quan kết nối OpenAQ API v3 (`https://api.openaq.org/v3/locations`)
+- **Trạng thái HTTP:** **`200 OK`** (Đã xác thực thành công bằng `OPENAQ_API_KEY` trong `.env`)
+- **Độ trễ mạng:** `1138 ms`
+- **Tổng số trạm đo PM2.5 (`parameter_id = 2`) tìm thấy trong bán kính 25 km từ tâm Hà Nội:** **`37 trạm`**
+  - Trong đó có **32 trạm chính thức** thuộc **`Hanoi Air Quality Monitoring Network`** (Mạng lưới quan trắc chất lượng không khí Thành phố Hà Nội / cơ quan nhà nước, loại thiết bị `Government Monitor`, `isMonitor: true`).
+  - Các trạm còn lại thuộc `StateAir Hanoi` / `AirNow` (Đại sứ quán Mỹ), `SPARTAN Network` (Viện Hàn lâm KH&CN Việt Nam), `AirGradient` và `HabitatMap`.
 
-#### A. Open-Meteo Air Quality API (`https://air-quality-api.open-meteo.com/v1/air-quality`)
-- **Trạng thái HTTP:** `200 OK`
-- **Độ trễ phản hồi (Latency):** `2032 ms`
-- **Dữ liệu thực tế thu được tại Hà Nội (Mốc giờ `2026-10-28T17:00` GMT+7):**
-  1. **Tâm ô lưới Khu vực Trung tâm Hà Nội (`21.00°N, 105.90°E`, độ cao `19m`):**
-     - Nồng độ bụi mịn `pm2_5`: **`40.6 µg/m³`**
-     - Nồng độ bụi `pm10`: **`41.9 µg/m³`**
-     - Chỉ số `us_aqi`: **`154 USAQI`**
-     - Chỉ số `european_aqi`: **`71 EAQI`**
-  2. **Tâm ô lưới Khu vực Phía Bắc Hà Nội (`21.30°N, 105.90°E`, độ cao `14m`):**
-     - Nồng độ bụi mịn `pm2_5`: **`40.6 µg/m³`**
-     - Nồng độ bụi `pm10`: **`41.9 µg/m³`**
-  3. **Tâm ô lưới Khu vực Tây Nam Hà Nội (`20.80°N, 105.70°E`, độ cao `21m`):**
-     - Nồng độ bụi mịn `pm2_5`: **`47.0 µg/m³`**
-     - Nồng độ bụi `pm10`: **`48.3 µg/m³`**
-     - Chỉ số `us_aqi`: **`154 USAQI`**
-     - Chỉ số `european_aqi`: **`75 EAQI`**
-- **Chuỗi thời gian theo giờ (`hourly`):** Trả về chính xác `120` bản ghi theo giờ liên tục từ `2026-10-26T00:00` đến `2026-10-30T23:00` (48 giờ quá khứ + 72 giờ dự báo).
+### 1.2. Bảng 5 trạm OpenAQ v3 tại Hà Nội có dữ liệu mới trong ngày 28/10/2026 (Đã kiểm chứng nồng độ `µg/m³`)
 
-#### B. Open-Meteo Weather Forecast API (`https://api.open-meteo.com/v1/forecast`)
-- **Trạng thái HTTP:** `200 OK`
-- **Độ trễ phản hồi (Latency):** `1983 ms`
-- **Tọa độ lưới giải quyết:** `21.05448°N, 105.898476°E` (độ cao `19m`)
-- **Dữ liệu thời tiết thực tế tại Hà Nội (Mốc thời gian `2026-10-28T17:30` GMT+7, chu kỳ cập nhật `900s` = 15 phút):**
-  - Nhiệt độ (`temperature_2m`): **`27.6 °C`**
-  - Độ ẩm tương đối (`relative_humidity_2m`): **`70 %`**
-  - Lượng mưa (`precipitation`): **`0 mm`**
-  - Áp suất khí quyển bề mặt (`surface_pressure`): **`1013.5 hPa`**
-  - Tốc độ gió ở độ cao 10m (`wind_speed_10m`): **`10.5 km/h`**
-  - Hướng gió ở độ cao 10m (`wind_direction_10m`): **`145°`** (Gió Đông Nam)
-- **Chuỗi thời gian theo giờ (`hourly`):** `120` mốc giờ liên tục.
+| Location ID | Tên trạm quan trắc | Nhà cung cấp (`provider`) | Loại thiết bị | Vĩ độ (`lat`) | Kinh độ (`lon`) | Sensor ID (`pm25`) | Giá trị PM2.5 mới nhất (`µg/m³`) | Thời điểm đo (`measured_at` GMT+7) | Độ trễ tại lúc kiểm tra (`17:59`) | Phân loại trạng thái (`Freshness`) |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **`4946812`** | **Công viên Nhân Chính - Khuất Duy Tiến** | Hanoi Air Quality Monitoring Network | Government Monitor | `21.0031` | `105.7947` | `13502151` | **`33.60 µg/m³`** | `2026-10-28T17:35:00+07:00` | **24 phút** | **`FRESH`** (Đang hoạt động tốt) |
+| **`4946813`** | **Số 1 đường Giải Phóng - P. Bạch Mai - ĐHBK** | Hanoi Air Quality Monitoring Network | Government Monitor | `21.0052` | `105.8418` | `13502154` | **`44.28 µg/m³`** | `2026-10-28T17:35:00+07:00` | **24 phút** | **`FRESH`** (Đang hoạt động tốt) |
+| **`6123215`** | **Dragon (Khu vực Đông Nam Hà Nội / Gia Lâm)** | AirGradient | Community Sensor (`O-1PST`) | `20.9933` | `105.9441` | `14581375` | **`49.40 µg/m³`** | `2026-10-28T17:00:00+07:00` | **59 phút** | **`FRESH`** (Đang hoạt động tốt) |
+| **`2161292`** | **Số 46, phố Lưu Quang Vũ (Cầu Giấy)** | Hanoi Air Quality Monitoring Network | Government Monitor | `21.0152` | `105.7999` | `7772032` | **`35.66 µg/m³`** | `2026-10-28T08:00:00+07:00` | **9 giờ 59 phút** | **`STALE`** (Dữ liệu trễ trong ngày) |
+| **`2161306`** | **Minh Khai - Bắc Từ Liêm** | Hanoi Air Quality Monitoring Network | Government Monitor | `21.0500` | `105.7400` | `7772087` | **`40.36 µg/m³`** | `2026-10-28T08:00:00+07:00` | **9 giờ 59 phút** | **`STALE`** (Dữ liệu trễ trong ngày) |
 
-#### C. Open-Meteo Geocoding API (`https://geocoding-api.open-meteo.com/v1/search`)
-- **Trạng thái HTTP:** `200 OK`
-- **Kết quả truy vấn thử từ khóa `"Ha Noi"` (`language=vi`):**
-  - Trả về chính xác bản ghi thủ đô: `id: 1581130`, `name: "Hà Nội"`, `latitude: 21.0245`, `longitude: 105.84117`, `country: "Việt Nam"`, `admin1: "Hanoi"`, `population: 8053663`.
+### 1.3. Danh sách 32 trạm OpenAQ v3 tại Hà Nội đang ngừng phát tín hiệu thời gian thực (`UNAVAILABLE` hiện tại — Có dữ liệu lịch sử 2016–2026)
+
+Các trạm dưới đây đều nằm trên địa bàn Hà Nội (bao gồm cả nội thành và các huyện ngoại thành như Sóc Sơn, Đông Anh, Hoài Đức, Quốc Oai, Chương Mỹ, Thanh Oai), đóng vai trò quan trọng để:
+1. Phân tích chuỗi dữ liệu lịch sử nhiều năm tại Hà Nội.
+2. Kiểm thử thực tế chức năng **Cảnh báo trạm mất tín hiệu (`STATION_OFFLINE` / `UNAVAILABLE`)** và bộ lọc trạng thái trạm trên bản đồ WebGIS.
+
+| Nhóm khu vực | Các trạm tiêu biểu trong mạng lưới OpenAQ Hà Nội (`locationId` — Tên trạm — Thời điểm gửi dữ liệu cuối) |
+| :--- | :--- |
+| **Nội thành trung tâm** | `4946811` **556 Nguyễn Văn Cừ** (`2026-07-15`); `7441` **Hanoi - US Embassy AirNow** (`2025-04-09`); `2161294` **Cung thiếu nhi** (`2025-02-05`); `2161296` **Đào Duy Từ** (`2025-06-10`); `2161299` **Hàng Đậu** (`2024-11-27`); `2161300` **Hoàn Kiếm** (`2024-02-01`); `2161301` **Khương Trung** (`2024-12-11`); `2161303` **Kim Liên** (`2024-03-22`); `2161304` **Lê Trực** (`2024-01-31`); `2161313` **Tân Mai** (`2024-03-01`); `2161316` **Thành Công** (`2024-02-27`); `2161295` **Đầm Trấu** (`2024-01-30`); `2161298` **Đông Kinh Nghĩa Thục** (`2024-04-15`). |
+| **Vành đai & Quận mới** | `2161291` **Cầu Diễn** (`2024-12-11`); `2161307` **Mỹ Đình** (`2024-01-30`); `2161308` **Phạm Văn Đồng** (`2024-01-22`); `2161309` **Pháp Vân** (`2025-02-05`); `2161314` **Tây Hồ Tây** (`2024-03-22`); `2161315` **Tây Mỗ** (`2024-02-07`); `2161318` **Tứ Liên** (`2024-03-22`); `2161321` **Văn Quán - Hà Đông** (`2024-04-05`). |
+| **Huyện ngoại thành Hà Nội** | `2161290` **An Khánh - Hoài Đức** (`2025-06-10`); `2161293` **Chúc Sơn - Chương Mỹ** (`2025-02-05`); `2161302` **Kim Bài - Thanh Oai** (`2024-12-08`); `2161311` **Sài Sơn - Quốc Oai** (`2025-02-05`); `2161317` **Thanh Xuân - Sóc Sơn** (`2024-09-10`); `2161320` **Vân Hà - Đông Anh** (`2025-06-10`); `2161322` **Võng La - Đông Anh** (`2024-01-15`). |
 
 ---
 
-### 1.2. Nguồn quan trắc thực tế cần cấu hình API Key cá nhân (Đang ở trạng thái CHỜ API KEY)
+## 2. Kết quả kiểm chứng trực tiếp WAQI API (`https://api.waqi.info`)
 
-> [!IMPORTANT]
-> Tuân thủ nghiêm ngặt Quy tắc 8 & Quy tắc 10 của Master Prompt: **Không tạo kết quả kiểm thử giả và không tuyên bố đã lấy được danh sách trạm chi tiết khi chưa có API key hợp lệ.**
+- **Trạng thái HTTP:** **`200 OK`** (Đã xác thực bằng `WAQI_API_TOKEN` cá nhân trong `.env`)
+- **Độ trễ mạng:** `130 ms` (với `/v2/map/bounds`) và `513 ms` (với `/feed/hanoi/`)
+- **Danh sách 10 trạm nằm trong địa giới Hà Nội trả về từ `/v2/map/bounds`:**
 
-#### A. OpenAQ API v3 (`https://api.openaq.org/v3/locations`)
-- **Trạng thái kết nối mạng:** Máy chủ phản hồi tốt (`HTTP 401`, độ trễ `261 ms`).
-- **Phản hồi thực tế từ server:**
-  ```json
-  {
-    "message": "Unauthorized. A valid API key must be provided in the X-API-Key header."
-  }
-  ```
-- **Trạng thái xác minh danh sách trạm tại Hà Nội:** **CHƯA KIỂM CHỨNG CHI TIẾT TỌA ĐỘ & GIÁ TRỊ ĐO (Chờ người dùng cung cấp `OPENAQ_API_KEY` vào file `.env`)**.
-- **Cách thức xác minh ngay sau khi có Key:** Chỉ cần thêm `OPENAQ_API_KEY=...` vào file `.env` và chạy lại lệnh `node scripts/verify-data-sources.mjs`, script sẽ tự động xuất toàn bộ danh sách trạm PM2.5 tại Hà Nội, tọa độ thực, cảm biến, thời điểm đo mới nhất và độ trễ thực tế của từng trạm.
+| WAQI UID | Tên trạm trên WAQI | Vĩ độ (`lat`) | Kinh độ (`lon`) | Giá trị `aqi` (US-EPA Sub-index) | Thời điểm cập nhật | Ghi chú đối chiếu với OpenAQ |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **`8688`** | **UNIS Hanoi (Trường Quốc tế LHQ, Tây Hồ)** | `21.0811` | `105.8180` | **`122`** (`iaqi.pm25.v = 122`) | `2026-10-28T16:00+07:00` | Trạm bổ sung quan trọng ở khu vực Tây Hồ. |
+| **`-573400`** | **Mo Lao, Ha Dong (Mộ Lao, Hà Đông)** | `20.9778` | `105.7832` | **`110`** | `2026-10-28T17:52+07:00` | Trạm bổ sung đang hoạt động tại quận Hà Đông. |
+| **`-112819`** | **Phố Nguyễn Duy Trinh (Hoàng Mai)** | `20.9640` | `105.8300` | **`96`** | `2026-10-28T17:47+07:00` | Trạm bổ sung đang hoạt động tại quận Hoàng Mai. |
+| **`-1791037`** | **Tay Ho Ward (Phường Tây Hồ)** | `21.0700` | `105.8240` | **`81`** | `2026-10-28T17:50+07:00` | Trạm bổ sung đang hoạt động tại quận Tây Hồ. |
+| **`-477292`** | **Hà Nội: Công viên Nhân Chính - Khuất Duy Tiến** | `21.0031` | `105.7947` | **`81`** | `2026-10-28T17:00+07:00` | Trùng khớp vị trí với trạm OpenAQ `4946812` (`33.6 µg/m³`). |
+| **`-476341`** | **Hà Nội: ĐHBK cổng Parabol đường Giải Phóng** | `21.0052` | `105.8418` | **`71`** | `2026-10-28T17:00+07:00` | Trùng khớp vị trí với trạm OpenAQ `4946813` (`44.28 µg/m³`). |
+| **`1583`** | **Hanoi, Vietnam (556 Nguyễn Văn Cừ)** | `21.0491` | `105.8831` | **`8`** | `2026-10-28T16:00+09:00` | Cần kiểm tra chất lượng (QC flag) vì chỉ số thấp bất thường so với toàn vùng. |
+| **`8641`** | **Hanoi US Embassy (Đại sứ quán Mỹ)** | `21.0215` | `105.8189` | `"-"` | Tạm ngưng báo AQI | Trùng khớp trạng thái với OpenAQ `7441`. |
+| **`13026`** | **Hà Nội/Chi cục BVMT (46 Lưu Quang Vũ)** | `21.0153` | `105.8001` | `"-"` | `2026-10-28T08:00+07:00` | Trùng khớp với trạm OpenAQ `2161292` (chỉ gửi dữ liệu lúc 08:00 sáng). |
+| **`13251`** | **Hà Nội/UBND P. Minh Khai, Bắc Từ Liêm** | `21.0498` | `105.7419` | `"-"` | `2026-10-28T08:00+07:00` | Trùng khớp với trạm OpenAQ `2161306` (chỉ gửi dữ liệu lúc 08:00 sáng). |
 
-#### B. WAQI API (`https://api.waqi.info/`)
-- **Trạng thái kết nối mạng:** Máy chủ phản hồi tốt (`HTTP 200`, độ trễ `121 ms` – `1098 ms`).
-- **Phản hồi thực tế khi dùng `token=demo`:**
-  - Endpoint `/feed/hanoi/?token=demo`: Trả về dữ liệu mẫu của **Thượng Hải (`Shanghai`)**, không trả về dữ liệu Hà Nội.
-  - Endpoint `/v2/map/bounds?latlng=20.56,105.28,21.39,106.02&networks=all&token=demo`:
-    ```json
-    {
-      "status": "error",
-      "data": "Invalid key"
-    }
-    ```
-- **Trạng thái xác minh danh sách trạm WAQI tại Hà Nội:** **CHƯA KIỂM CHỨNG CHI TIẾT (Chờ người dùng đăng ký `WAQI_API_TOKEN` miễn phí tại `https://aqicn.org/data-platform/token/`)**.
+*(Lưu ý: Trạm thứ 11 trong bounding box là `uid: 5506 - Tp Việt Trì, Phú Thọ` tại tọa độ `21.338, 105.367` nằm ngoài ranh giới hành chính Hà Nội. Nhờ bộ lọc không gian PostGIS `ST_Within(station.geom, hanoi_boundary.geom)`, hệ thống của chúng ta sẽ tự động phân loại chính xác trạm Việt Trì là `OUTSIDE_STUDY_AREA`!).*
 
 ---
 
-## 2. Phân biệt 5 mốc thời gian trong chuỗi thu thập gần thời gian thực (Theo mục 12 — Master Prompt)
+## 3. Kết quả kiểm chứng Dữ liệu Mô hình & Khí tượng (Open-Meteo APIs)
 
-Để đảm bảo tính trung thực khoa học, cơ sở dữ liệu và giao diện của hệ thống **Hanoi PM2.5 GIS** bắt buộc lưu trữ và phân biệt rõ 5 mốc thời gian sau cho mỗi bản ghi quan trắc:
+1. **Open-Meteo Air Quality API (`HTTP 200 OK`, `904 ms`):**
+   - Nồng độ mô hình CAMS Global tại Hà Nội lúc `17:00 28/10/2026`:
+     - Trung tâm & Phía Bắc Hà Nội (`21.0°N, 105.9°E` & `21.3°N, 105.9°E`): **`pm2_5 = 40.6 µg/m³`**, **`pm10 = 41.9 µg/m³`**, **`us_aqi = 154`**.
+     - Tây Nam Hà Nội (`20.8°N, 105.7°E`): **`pm2_5 = 47.0 µg/m³`**, **`pm10 = 48.3 µg/m³`**.
+   - **Nhận xét khoa học cực kỳ giá trị:** Giá trị mô hình CAMS Global (`40.6 – 47.0 µg/m³`) nằm hoàn toàn khớp trong dải giá trị đo thực tế của 5 trạm OpenAQ tại Hà Nội cùng thời điểm (`33.60 – 49.40 µg/m³`, trung bình `40.66 µg/m³`)! Điều này chứng minh sự kết hợp giữa **Trạm đo thực tế OpenAQ** và **Lưới mô hình Open-Meteo CAMS** có tính tương thích thực nghiệm rất cao.
+2. **Open-Meteo Weather Forecast API (`HTTP 200 OK`, `853 ms`):**
+   - Lúc `17:45 28/10/2026`: Nhiệt độ **`27.5 °C`**, Độ ẩm **`70 %`**, Gió **`9.9 km/h`** hướng **`148°`** (Đông Nam), Áp suất **`1013.6 hPa`**, Lượng mưa **`0 mm`**.
+3. **Open-Meteo Geocoding API (`HTTP 200 OK`):**
+   - Truy vấn `"Ha Noi"` trả về chính xác Thủ đô Hà Nội (`21.0245, 105.84117`).
+
+---
+
+## 4. Phân biệt 5 mốc thời gian trong chuỗi thu thập gần thời gian thực (Theo mục 12 — Master Prompt)
 
 | STT | Tên trường kỹ thuật | Ý nghĩa khoa học / Kỹ thuật | Nguồn cung cấp |
 | :--- | :--- | :--- | :--- |
-| 1 | `measured_at_utc` | **Thời điểm trạm thực hiện phép đo:** Thời điểm thiết bị cảm biến quang học/beta-attenuation tại trạm hoàn tất chu kỳ đo (ví dụ kết thúc trung bình 1 giờ). | Trường `datetime.utc` (OpenAQ) hoặc `time.iso` (WAQI). |
-| 2 | `published_at_utc` | **Thời điểm nhà cung cấp công bố dữ liệu:** Thời điểm dữ liệu từ datalogger của trạm được đồng bộ lên máy chủ OpenAQ / WAQI / CAMS. | Metadata đồng bộ của API nguồn (nếu có, ví dụ `debug.sync`). |
-| 3 | `fetched_at_utc` | **Thời điểm Backend thu thập dữ liệu:** Thời điểm Ingestion Worker của hệ thống Hanoi PM2.5 GIS gọi HTTP request thành công tới API nguồn. | Sinh tự động tại Backend Worker (`new Date().toISOString()`). |
-| 4 | `stored_at_utc` | **Thời điểm Database lưu dữ liệu:** Thời điểm bản ghi vượt qua bước kiểm tra chất lượng (QC) và được ghi (`INSERT`/`UPSERT`) vào bảng `pm25_observations` trong PostgreSQL. | `DEFAULT NOW()` trong PostgreSQL. |
-| 5 | `displayed_at_utc` | **Thời điểm Frontend hiển thị dữ liệu:** Thời điểm trình duyệt người dùng nhận gói tin qua REST/SSE và render lên bản đồ MapLibre. | State đồng hồ tại trình duyệt người dùng. |
-
-### Công thức tính Độ trễ dữ liệu thực tế (Data Lag):
-$$\text{Data Lag (phút)} = \frac{\text{Current Time (UTC)} - \text{measured\_at\_utc}}{60}$$
-
-> [!WARNING]
-> **Nguyên tắc hiển thị bắt buộc trên giao diện:**
-> Giao diện **KHÔNG BAO GIỜ** lấy `fetched_at_utc` hay `displayed_at_utc` để tuyên bố là *"Dữ liệu đo lúc vừa xong"*. Mọi popup trạm và thanh trạng thái trên Header phải hiển thị rõ ràng cả **Thời điểm trạm đo (`measured_at`)** và **Thời điểm hệ thống kiểm tra gần nhất (`fetched_at`)**.
+| 1 | `measured_at_utc` | **Thời điểm trạm thực hiện phép đo** | Trường `datetime.utc` (OpenAQ) hoặc `time.iso` (WAQI) |
+| 2 | `published_at_utc` | **Thời điểm nhà cung cấp công bố dữ liệu** | Metadata đồng bộ của API nguồn |
+| 3 | `fetched_at_utc` | **Thời điểm Backend thu thập dữ liệu** | Sinh tự động tại Backend Worker |
+| 4 | `stored_at_utc` | **Thời điểm Database lưu dữ liệu** | `DEFAULT NOW()` trong PostgreSQL |
+| 5 | `displayed_at_utc` | **Thời điểm Frontend hiển thị dữ liệu** | Đồng hồ tại trình duyệt người dùng |

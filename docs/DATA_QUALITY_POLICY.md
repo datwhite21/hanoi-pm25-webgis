@@ -66,3 +66,4 @@ Trong bảng `monitoring_stations` và `sensors`, hệ thống bắt buộc phâ
 1. **`REFERENCE_GRADE` (Trạm chuẩn tham chiếu quốc gia / Đại sứ quán):** Sử dụng phương pháp hấp thụ tia Beta (BAM) hoặc TEOM (ví dụ: Trạm ĐSQ Mỹ tại Láng Hạ, trạm chuẩn 556 Nguyễn Văn Cừ). Độ chính xác cao nhất, là mốc chuẩn đối chiếu.
 2. **`LOW_COST_SENSOR` (Trạm cảm biến quang học chi phí thấp / Cộng đồng):** Sử dụng nguyên lý tán xạ laser (Laser Scattering), nhạy với độ ẩm không khí cao (khi độ ẩm $> 85\%$ dễ đọc cao hơn thực tế nếu chưa hiệu chỉnh ẩm).
 3. **`NUMERICAL_MODEL` (Dữ liệu mô hình số trị — CAMS Global / Open-Meteo):** Dữ liệu tính toán từ mô hình hóa học khí quyển kết hợp viễn thám vệ tinh trên ô lưới ~40 km. Không phải phép đo trực tiếp tại mặt đất.
+

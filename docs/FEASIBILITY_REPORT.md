@@ -65,3 +65,4 @@ Thành phố Hà Nội có diện tích khoảng **3.359,8 km²**, trải dài t
 ## 4. Kết luận về tính khả thi
 
 Đề tài **Hanoi PM2.5 GIS** hoàn toàn **KHẢ THI 100%** về mặt kỹ thuật, dữ liệu, chi phí (0 đồng với các gói học thuật/miễn phí) và đáp ứng xuất sắc các tiêu chí học thuật của một Đồ án chuyên ngành Công nghệ thông tin chất lượng cao.
+

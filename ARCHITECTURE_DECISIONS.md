@@ -39,3 +39,4 @@ Tài liệu này lưu lại mọi quyết định kiến trúc và công nghệ 
 - **Ngày quyết định:** 28/10/2026 (Giai đoạn 0)
 - **Bối cảnh:** Các dịch vụ Backend hosting miễn phí (như Render Free Tier) tự động ngủ sau 15 phút không có truy cập, làm gián đoạn tiến trình `cron` nội bộ.
 - **Quyết định:** Thiết kế module Ingestion vừa chạy được bằng **In-process Scheduler** (khi chạy máy local hoặc VPS 24/7), vừa cung cấp **Protected Webhook Endpoint (`POST /api/v1/internal/ingest/trigger`)** để **GitHub Actions Cron / External Free Cron** gọi định kỳ mỗi 15 phút khi triển khai công khai.
+
