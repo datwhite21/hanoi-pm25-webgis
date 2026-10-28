@@ -1,0 +1,80 @@
+{
+  "executedAtUtc": "2026-10-28T13:19:52.618Z",
+  "spatialGistIndexesCount": 8,
+  "spatialGistIndexes": [
+    {
+      "tablename": "administrative_areas",
+      "indexname": "idx_admin_areas_geog_gist",
+      "indexdef": "CREATE INDEX idx_admin_areas_geog_gist ON public.administrative_areas USING gist (((geom)::geography))"
+    },
+    {
+      "tablename": "administrative_areas",
+      "indexname": "idx_admin_areas_geom_gist",
+      "indexdef": "CREATE INDEX idx_admin_areas_geom_gist ON public.administrative_areas USING gist (geom)"
+    },
+    {
+      "tablename": "model_grid_cells",
+      "indexname": "idx_model_cells_point_gist",
+      "indexdef": "CREATE INDEX idx_model_cells_point_gist ON public.model_grid_cells USING gist (center_point)"
+    },
+    {
+      "tablename": "model_grid_cells",
+      "indexname": "idx_model_cells_poly_gist",
+      "indexdef": "CREATE INDEX idx_model_cells_poly_gist ON public.model_grid_cells USING gist (cell_polygon)"
+    },
+    {
+      "tablename": "monitoring_stations",
+      "indexname": "idx_stations_geog_gist",
+      "indexdef": "CREATE INDEX idx_stations_geog_gist ON public.monitoring_stations USING gist (((geom)::geography))"
+    },
+    {
+      "tablename": "monitoring_stations",
+      "indexname": "idx_stations_geom_gist",
+      "indexdef": "CREATE INDEX idx_stations_geom_gist ON public.monitoring_stations USING gist (geom)"
+    },
+    {
+      "tablename": "user_favorite_locations",
+      "indexname": "idx_fav_locations_geom_gist",
+      "indexdef": "CREATE INDEX idx_fav_locations_geom_gist ON public.user_favorite_locations USING gist (geom)"
+    },
+    {
+      "tablename": "weather_data",
+      "indexname": "idx_weather_geom_gist",
+      "indexdef": "CREATE INDEX idx_weather_geom_gist ON public.weather_data USING gist (geom)"
+    }
+  ],
+  "queryBenchmarks": [
+    {
+      "code": "SPATIAL_QUERY_1_POINT_IN_POLYGON",
+      "descriptionVi": "Kiểm tra điểm (21.0058°N, 105.8418°E - ĐHBK Hà Nội) nằm trong đơn vị hành chính bằng ST_Contains + GIST Index",
+      "planningTimeMs": 183.685,
+      "executionTimeMs": 1.566,
+      "networkRoundTripMs": 1339.73,
+      "rootNodeType": "Limit"
+    },
+    {
+      "code": "SPATIAL_QUERY_2_KNN_NEAREST_STATIONS",
+      "descriptionVi": "Tìm 5 trạm quan trắc gần nhất trong bán kính 15 km bằng ST_DWithin(geography) + toán tử khoảng cách KNN <->",
+      "planningTimeMs": 3.074,
+      "executionTimeMs": 91.42,
+      "networkRoundTripMs": 211.79,
+      "rootNodeType": "Limit"
+    },
+    {
+      "code": "SPATIAL_QUERY_3_STATION_WITHIN_DISTRICT_AGGREGATION",
+      "descriptionVi": "Tổng hợp nồng độ PM2.5 trung bình theo từng quận/huyện Hà Nội bằng ST_Within(ms.geom, aa.geom)",
+      "planningTimeMs": 0.755,
+      "executionTimeMs": 5.599,
+      "networkRoundTripMs": 217.41,
+      "rootNodeType": "Sort"
+    },
+    {
+      "code": "SPATIAL_QUERY_4_CAMS_GRID_INTERSECTION",
+      "descriptionVi": "Xác định các ô lưới mô hình CAMS 0.4° (~40 km) giao cắt với địa giới hành chính Sóc Sơn bằng ST_Intersects",
+      "planningTimeMs": 0.323,
+      "executionTimeMs": 5.838,
+      "networkRoundTripMs": 119.46,
+      "rootNodeType": "Nested Loop"
+    }
+  ]
+}

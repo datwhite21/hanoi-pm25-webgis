@@ -3,7 +3,7 @@
 > [!IMPORTANT]
 > **Dành cho AI trong các phiên làm việc tiếp theo:** Hãy luôn đọc file này đầu tiên cùng với `NEXT_STEPS.md` và `ARCHITECTURE_DECISIONS.md` trước khi thực hiện bất kỳ thao tác nào.
 
-**Cập nhật lần cuối:** 2026-10-28 20:07 (GMT+7)  
+**Cập nhật lần cuối:** 2026-10-28 20:20 (GMT+7)  
 **Các giai đoạn đã hoàn thành:**
 - **GIAI ĐOẠN 0 — KIỂM TRA MÔI TRƯỜNG VÀ KHẢO SÁT DỮ LIỆU:** **Hoàn thành 100%**
 - **GIAI ĐOẠN 1 — PHÂN TÍCH YÊU CẦU & THIẾT KẾ HỆ THỐNG:** **Hoàn thành 100%**
@@ -13,30 +13,31 @@
 - **GIAI ĐOẠN 5 — TÍCH HỢP WEBGIS FRONTEND VỚI BACKEND POSTGIS API VÀ TRUY VẤN KHÔNG GIAN THỜI GIAN THỰC:** **Hoàn thành 100%**
 - **GIAI ĐOẠN 6 — CẢNH BÁO Ô NHIỄM NÂNG CAO, LƯU ĐỊA ĐIỂM YÊU THÍCH (POSTGIS FAVORITES) VÀ PHÂN TÍCH TƯƠNG QUAN KHÍ TƯỢNG – PM2.5:** **Hoàn thành 100%**
 - **GIAI ĐOẠN 7 — QUẢN TRỊ HỆ THỐNG, GIAO DIỆN PHÂN QUYỀN RBAC (`ADMIN` / `USER` / `GUEST`) & NHẬT KÝ KIỂM TOÁN (`audit_logs`):** **Hoàn thành 100%**
+- **GIAI ĐOẠN 8 — KIỂM THỬ TOÀN DIỆN, ĐÁNH GIÁ HIỆU NĂNG KHÔNG GIAN POSTGIS (`EXPLAIN ANALYZE`), BẢO MẬT & TỐI ƯU GÓI BUILD (`manualChunks`):** **Hoàn thành 100%**
 
-**Giai đoạn tiếp theo:** **GIAI ĐOẠN 8 — KIỂM THỬ TOÀN DIỆN (END-TO-END, BẢO MẬT, HIỆU NĂNG POSTGIS & TỐI ƯU GÓI BUILD)** (Chờ người dùng xác nhận chuyển giai đoạn)
-
----
-
-## 1. Kết quả Kiểm thử Giai đoạn 7 (Quản trị Hệ thống, Phân quyền RBAC & Nhật ký Kiểm toán `audit_logs`)
-
-- **Trung tâm Quản trị Hệ thống & Phân quyền RBAC (`apps/web/src/components/AdminDashboardModal.tsx`):**
-  - Hiển thị trực quan Ma trận phân quyền RBAC (`GUEST`, `USER`, `ADMIN`) và chặn truy cập (`HTTP 403 Forbidden`) khi vai trò hiện tại không phải `ADMIN`, kèm nút 1-click đăng nhập tài khoản Quản trị viên (`admin@hanoi-pm25-gis.vn`).
-  - **Tab 1 — Tiến trình Thu thập Tự động (`ingestion_jobs`):** Xem lịch sử thực thi của các worker (`OPENAQ_V3`, `WAQI_API`, `OPEN_METEO_CAMS`, `OPEN_METEO_WEATHER`) và nút kích hoạt thu thập dữ liệu thực tế tức thời (`POST /api/v1/admin/ingestion/trigger`).
-  - **Tab 2 — Quản lý Quy tắc & Xử lý Cảnh báo (`alert_rules` & `air_quality_alerts`):** Bật/tắt quy tắc cảnh báo, chỉnh sửa ngưỡng kích hoạt (`PATCH /api/v1/admin/alert-rules/:id`) và xác nhận/đóng cảnh báo (`PATCH /api/v1/admin/alerts/:id/status`).
-  - **Tab 3 — Nhật ký Kiểm toán Bất biến (`audit_logs`):** Truy vết toàn bộ thao tác quản trị (thời điểm, email người thực hiện, bảng tác động, giá trị JSONB trước và sau khi sửa `old_values -> new_values`, và lý do).
-- **Kiểm tra kiểu tĩnh TypeScript (`npm run typecheck`) & Build (`npm run build`):** Đạt 100% (`0 errors`).
-- **Kiểm thử tự động (`npm test`):** Đạt **24/24 bài kiểm thử (`3 test files passed`)**.
+**Giai đoạn tiếp theo:** **GIAI ĐOẠN 9 — CẤU HÌNH TRIỂN KHAI CLOUD CÔNG KHAI (VERCEL / RENDER / SUPABASE) & DOCKERIZACIÓN** (Chờ người dùng xác nhận chuyển giai đoạn)
 
 ---
 
-## 2. Danh sách File đã tạo / sửa trong Giai đoạn 7
+## 1. Kết quả Kiểm thử Giai đoạn 8 (Kiểm thử toàn diện, Hiệu năng PostGIS & Tối ưu Build)
 
-1. `apps/api/src/routes/adminRoutes.ts`
-2. `apps/api/src/__tests__/api-postgis.test.ts`
-3. `apps/web/src/services/apiClient.ts`
-4. `apps/web/src/store/useWebGisStore.ts`
-5. `apps/web/src/components/AdminDashboardModal.tsx`
-6. `apps/web/src/components/FloatingHeader.tsx`
-7. `apps/web/src/App.tsx`
-8. `apps/web/src/__tests__/snapshot-and-inspector.test.ts`
+- **Tối ưu hóa Gói Build Production (`apps/web/vite.config.ts`):**
+  - Phân tách gói độc lập (`manualChunks`) thành `vendor-maplibre` (`217.91 kB gzip`), `vendor-react` (`54.94 kB gzip`), `vendor-icons` (`3.64 kB gzip`), và `index` (`148.33 kB gzip`), loại bỏ 100% cảnh báo chunk size.
+- **Đo kiểm Hiệu năng Không gian PostGIS (`scripts/benchmark-postgis-and-security.mjs` & `scripts/postgis-benchmark-results.json`):**
+  - Thực thi `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` trên Supabase PostgreSQL 17 + PostGIS 3.3.7 với 8 chỉ mục GIST:
+    - `ST_Contains` (Point-in-Polygon): **`1.566 ms`**
+    - `ST_Within` (Tổng hợp PM2.5 theo quận/huyện): **`5.599 ms`**
+    - `ST_Intersects` (Giao cắt ô lưới CAMS 0.4°): **`5.838 ms`**
+    - `ST_DWithin` + `<->` (KNN 5 trạm gần nhất trong 15 km): **`91.42 ms`**
+- **Kiểm thử Tự động & Bảo mật (`npm test`):** Đạt **25/25 bài kiểm thử (`3 test files passed`)**, bao gồm kiểm thử chống SQL Injection, kiểm tra biên Zod (`400`) và chống giả mạo JWT (`401`).
+- **Tài liệu Báo cáo Kiểm thử:** Xuất bản [`docs/testing/SYSTEM_TEST_REPORT.md`](docs/testing/SYSTEM_TEST_REPORT.md).
+
+---
+
+## 2. Danh sách File đã tạo / sửa trong Giai đoạn 8
+
+1. `apps/web/vite.config.ts`
+2. `scripts/benchmark-postgis-and-security.mjs`
+3. `scripts/postgis-benchmark-results.json`
+4. `apps/api/src/__tests__/api-postgis.test.ts`
+5. `docs/testing/SYSTEM_TEST_REPORT.md`

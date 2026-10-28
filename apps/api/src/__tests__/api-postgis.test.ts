@@ -249,5 +249,25 @@ describe('Hanoi PM2.5 WebGIS Backend API & Live PostGIS Integration Tests', () =
     expect(latestAudit.action_type).toBe('UPDATE_ALERT_RULE');
     expect(latestAudit.target_table).toBe('alert_rules');
   });
+
+  it('enforces Zod input validation (400), rejects forged JWT tokens (401), and prevents SQL injection via parameterized queries', async () => {
+    const outOfBoundsRes = await request(app).get(
+      '/api/v1/gis/inspect-point?lat=89.99&lon=179.99'
+    );
+    expect(outOfBoundsRes.status).toBe(400);
+    expect(outOfBoundsRes.body.success).toBe(false);
+    expect(outOfBoundsRes.body.error.code).toBe('VALIDATION_ERROR');
+
+    const forgedJwtRes = await request(app)
+      .get('/api/v1/admin/audit-logs')
+      .set('Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.forged.signature');
+    expect(forgedJwtRes.status).toBe(401);
+
+    const sqlInjectionAttemptRes = await request(app).get(
+      `/api/v1/areas/${encodeURIComponent("HN-HBT' OR '1'='1")}/statistics`
+    );
+    expect(sqlInjectionAttemptRes.status).toBe(404);
+    expect(sqlInjectionAttemptRes.body.error.code).toBe('AREA_NOT_FOUND');
+  });
 });
 
