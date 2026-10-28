@@ -1,0 +1,461 @@
+{
+  "verifiedAtUtc": "2026-10-28T10:41:46.299Z",
+  "verifiedAtVn": "17:41:46 28/10/2026",
+  "environment": {
+    "nodeVersion": "v24.22.1",
+    "platform": "win32",
+    "arch": "x64"
+  },
+  "sources": {
+    "airhanoi": {
+      "name": "AirHanoi Official Portal",
+      "url": "https://airhanoi.hanoi.gov.vn/",
+      "reachable": false,
+      "latencyMs": 237,
+      "error": "fetch failed",
+      "cause": "Hostname/IP does not match certificate's altnames: Host: airhanoi.hanoi.gov.vn. is not in the cert's altnames: DNS:moitruongthudo.vn"
+    },
+    "moitruongthudo": {
+      "name": "MoiTruongThuDo Portal",
+      "url": "https://moitruongthudo.vn/",
+      "reachable": true,
+      "status": 200,
+      "ok": true,
+      "latencyMs": 272,
+      "contentType": "text/html; charset=UTF-8",
+      "jsonData": null,
+      "bodyPreview": "<!DOCTYPE html>\n<!--[if IE 8]> <html lang=\"en\" class=\"ie8\"> <![endif]-->\n<!--[if !IE]><!-->\n<html lang=\"en\">\n<!--<![endif]-->\n\n<head>\n    <meta charset=\"utf-8\" />\n    <meta content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\" name=\"viewport\" />\n    <meta property=\"app_domain\" content=\"\" />\n    <title>Trang chủ | Cổng th&ocirc;ng tin quan trắc m&ocirc;i trường thủ đ&ocirc; H&agrave; Nội</title>\n<meta name=\"csrf_token\" content=\"zGhyofnK6PTmXesoLTIqMRaMZoH82PyqfDKgZl"
+    },
+    "cem_enviinfo": {
+      "name": "CEM MONRE EnviInfo",
+      "url": "https://enviinfo.cem.gov.vn/",
+      "reachable": true,
+      "status": 404,
+      "ok": false,
+      "latencyMs": 68,
+      "contentType": "text/html",
+      "jsonData": null,
+      "bodyPreview": " <div style=\"border: 3px solid #4991C5; font:1.5em; font-family:tahoma,calibri,arial; font-weight:bold; color:#1A4369; padding:5px; margin:10px; text-align:center\">  The specified URL cannot be found. </div><!--0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678"
+    },
+    "openaq_v3": {
+      "name": "OpenAQ API v3 (Hanoi Radius 25km, PM2.5 parameter_id=2)",
+      "url": "https://api.openaq.org/v3/locations?coordinates=21.0285,105.8542&radius=25000&parameters_id=2&limit=100",
+      "reachable": true,
+      "status": 401,
+      "ok": false,
+      "latencyMs": 164,
+      "contentType": "application/json",
+      "jsonData": {
+        "message": "Unauthorized. A valid API key must be provided in the X-API-Key header."
+      },
+      "apiKeyProvided": false,
+      "stationCountFound": null
+    },
+    "waqi": {
+      "tokenUsed": "demo (public test token)",
+      "feedHanoi": {
+        "name": "WAQI Feed Hanoi",
+        "url": "https://api.waqi.info/feed/hanoi/?token=***",
+        "reachable": true,
+        "status": 200,
+        "ok": true,
+        "latencyMs": 488,
+        "contentType": "application/json; charset=UTF-8",
+        "jsonData": {
+          "status": "ok",
+          "data": {
+            "aqi": 46,
+            "idx": 1437,
+            "attributions": [
+              {
+                "url": "https://sthj.sh.gov.cn/",
+                "name": "Shanghai Environment Monitoring Center(上海市环境监测中心)"
+              },
+              {
+                "url": "http://106.37.208.233:20035/emcpublish/",
+                "name": "China National Urban air quality real-time publishing platform (全国城市空气质量实时发布平台)"
+              },
+              {
+                "url": "https://china.usembassy-china.org.cn/embassy-consulates/shanghai/air-quality-monitor-stateair/",
+                "name": "U.S. Consulate Shanghai Air Quality Monitor"
+              },
+              {
+                "url": "https://waqi.info/",
+                "name": "World Air Quality Index Project"
+              }
+            ],
+            "city": {
+              "geo": [
+                31.2047372,
+                121.4489017
+              ],
+              "name": "Shanghai (上海)",
+              "url": "https://aqicn.org/city/shanghai",
+              "location": ""
+            },
+            "dominentpol": "pm25",
+            "iaqi": {
+              "co": {
+                "v": 2.8
+              },
+              "h": {
+                "v": 57.5
+              },
+              "no2": {
+                "v": 10.6
+              },
+              "o3": {
+                "v": 33.3
+              },
+              "p": {
+                "v": 1023
+              },
+              "pm10": {
+                "v": 27
+              },
+              "pm25": {
+                "v": 46
+              },
+              "so2": {
+                "v": 4.6
+              },
+              "t": {
+                "v": 20
+              },
+              "w": {
+                "v": 3.6
+              }
+            },
+            "time": {
+              "s": "2026-10-28 17:00:00",
+              "tz": "+08:00",
+              "v": 1793206800,
+              "iso": "2026-10-28T17:00:00+08:00"
+            },
+            "forecast": {
+              "daily": {
+                "o3": [
+                  {
+                    "avg": 1,
+                    "day": "2025-04-05",
+                    "max": 1,
+                    "min": 1
+                  }
+                ],
+                "pm10": [
+                  {
+                    "avg": 59,
+                    "day": "2026-10-26",
+                    "max": 59,
+                    "min": 59
+                  },
+                  {
+                    "avg": 53,
+                    "day": "2026-10-27",
+                    "max": 73,
+                    "min": 46
+                  },
+                  {
+                    "avg": 54,
+                    "day": "2026-10-28",
+                    "max": 73,
+                    "min": 26
+                  },
+                  {
+                    "avg": 66,
+                    "day": "2026-10-29",
+                    "max": 73,
+                    "min": 49
+                  },
+                  {
+                    "avg": 94,
+                    "day": "2026-10-30",
+                    "max": 123,
+                    "min": 58
+                  },
+                  {
+                    "avg": 86,
+                    "day": "2026-10-31",
+                    "max": 123,
+                    "min": 29
+                  },
+                  {
+                    "avg": 55,
+                    "day": "2026-11-01",
+                    "max": 58,
+                    "min": 46
+                  },
+                  {
+                    "avg": 56,
+                    "day": "2026-11-02",
+                    "max": 73,
+                    "min": 46
+                  },
+                  {
+                    "avg": 76,
+                    "day": "2026-11-03",
+                    "max": 112,
+                    "min": 46
+                  }
+                ],
+                "pm25": [
+                  {
+                    "avg": 159,
+                    "day": "2026-10-26",
+                    "max": 159,
+                    "min": 159
+                  },
+                  {
+                    "avg": 132,
+                    "day": "2026-10-27",
+                    "max": 174,
+                    "min": 68
+                  },
+                  {
+                    "avg": 139,
+                    "day": "2026-10-28",
+                    "max": 173,
+                    "min": 68
+                  },
+                  {
+                    "avg": 163,
+                    "day": "2026-10-29",
+                    "max": 174,
+                    "min": 142
+                  },
+                  {
+                    "avg": 206,
+                    "day": "2026-10-30",
+                    "max": 252,
+                    "min": 138
+                  },
+                  {
+                    "avg": 173,
+                    "day": "2026-10-31",
+                    "max": 252,
+                    "min": 89
+                  },
+                  {
+                    "avg": 134,
+                    "day": "2026-11-01",
+                    "max": 159,
+                    "min": 87
+                  },
+                  {
+                    "avg": 150,
+                    "day": "2026-11-02",
+                    "max": 174,
+                    "min": 89
+                  },
+                  {
+                    "avg": 177,
+                    "day": "2026-11-03",
+                    "max": 230,
+                    "min": 127
+                  }
+                ],
+                "uvi": [
+                  {
+                    "avg": 2,
+                    "day": "2026-10-28",
+                    "max": 4,
+                    "min": 0
+                  },
+                  {
+                    "avg": 1,
+                    "day": "2026-10-29",
+                    "max": 4,
+                    "min": 0
+                  },
+                  {
+                    "avg": 2,
+                    "day": "2026-10-30",
+                    "max": 5,
+                    "min": 0
+                  },
+                  {
+                    "avg": 2,
+                    "day": "2026-10-31",
+                    "max": 5,
+                    "min": 0
+                  },
+                  {
+                    "avg": 2,
+                    "day": "2026-11-01",
+                    "max": 5,
+                    "min": 0
+                  },
+                  {
+                    "avg": 0,
+                    "day": "2026-11-02",
+                    "max": 0,
+                    "min": 0
+                  }
+                ]
+              }
+            },
+            "debug": {
+              "sync": "2026-10-28T19:41:08+09:00"
+            }
+          }
+        }
+      },
+      "boundsHanoi": {
+        "name": "WAQI Map Bounds Hanoi",
+        "url": "https://api.waqi.info/v2/map/bounds?latlng=20.56,105.28,21.39,106.02&networks=all&token=***",
+        "reachable": true,
+        "status": 200,
+        "ok": true,
+        "latencyMs": 121,
+        "contentType": "application/json; charset=UTF-8",
+        "jsonData": {
+          "status": "error",
+          "data": "Invalid key"
+        }
+      },
+      "stationCountInBounds": null
+    },
+    "open_meteo_air_quality": {
+      "reachable": true,
+      "status": 200,
+      "latencyMs": 959,
+      "gridPointsTested": [
+        {
+          "requested": {
+            "lat": 21,
+            "lon": 105.899994
+          },
+          "elevation": 19,
+          "current_units": {
+            "time": "iso8601",
+            "interval": "seconds",
+            "pm2_5": "μg/m³",
+            "pm10": "μg/m³",
+            "us_aqi": "USAQI",
+            "european_aqi": "EAQI"
+          },
+          "current": {
+            "time": "2026-10-28T17:00",
+            "interval": 3600,
+            "pm2_5": 40.6,
+            "pm10": 41.9,
+            "us_aqi": 154,
+            "european_aqi": 71
+          },
+          "hourlyTimeSteps": 120,
+          "hourlyRange": {
+            "start": "2026-10-26T00:00",
+            "end": "2026-10-30T23:00"
+          }
+        },
+        {
+          "requested": {
+            "lat": 21.300003,
+            "lon": 105.899994
+          },
+          "elevation": 14,
+          "current_units": {
+            "time": "iso8601",
+            "interval": "seconds",
+            "pm2_5": "μg/m³",
+            "pm10": "μg/m³",
+            "us_aqi": "USAQI",
+            "european_aqi": "EAQI"
+          },
+          "current": {
+            "time": "2026-10-28T17:00",
+            "interval": 3600,
+            "pm2_5": 40.6,
+            "pm10": 41.9,
+            "us_aqi": 154,
+            "european_aqi": 71
+          },
+          "hourlyTimeSteps": 120,
+          "hourlyRange": {
+            "start": "2026-10-26T00:00",
+            "end": "2026-10-30T23:00"
+          }
+        },
+        {
+          "requested": {
+            "lat": 20.800003,
+            "lon": 105.70001
+          },
+          "elevation": 21,
+          "current_units": {
+            "time": "iso8601",
+            "interval": "seconds",
+            "pm2_5": "μg/m³",
+            "pm10": "μg/m³",
+            "us_aqi": "USAQI",
+            "european_aqi": "EAQI"
+          },
+          "current": {
+            "time": "2026-10-28T17:00",
+            "interval": 3600,
+            "pm2_5": 47,
+            "pm10": 48.3,
+            "us_aqi": 154,
+            "european_aqi": 75
+          },
+          "hourlyTimeSteps": 120,
+          "hourlyRange": {
+            "start": "2026-10-26T00:00",
+            "end": "2026-10-30T23:00"
+          }
+        }
+      ]
+    },
+    "open_meteo_weather": {
+      "reachable": true,
+      "status": 200,
+      "latencyMs": 861,
+      "resolvedCoordinates": {
+        "latitude": 21.05448,
+        "longitude": 105.898476,
+        "elevation": 19
+      },
+      "current_units": {
+        "time": "iso8601",
+        "interval": "seconds",
+        "temperature_2m": "°C",
+        "relative_humidity_2m": "%",
+        "precipitation": "mm",
+        "surface_pressure": "hPa",
+        "wind_speed_10m": "km/h",
+        "wind_direction_10m": "°"
+      },
+      "current": {
+        "time": "2026-10-28T17:30",
+        "interval": 900,
+        "temperature_2m": 27.6,
+        "relative_humidity_2m": 70,
+        "precipitation": 0,
+        "surface_pressure": 1013.5,
+        "wind_speed_10m": 10.5,
+        "wind_direction_10m": 145
+      },
+      "hourlyTimeSteps": 120
+    },
+    "open_meteo_geocoding": {
+      "reachable": true,
+      "status": 200,
+      "latencyMs": 1030,
+      "topMatch": {
+        "id": 1581130,
+        "name": "Hà Nội",
+        "latitude": 21.0245,
+        "longitude": 105.84117,
+        "elevation": 10,
+        "feature_code": "PPLC",
+        "country_code": "VN",
+        "admin1_id": 1581129,
+        "timezone": "Asia/Bangkok",
+        "population": 8053663,
+        "country_id": 1562822,
+        "country": "Việt Nam",
+        "admin1": "Hanoi"
+      }
+    }
+  }
+}
