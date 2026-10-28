@@ -1,0 +1,121 @@
+{
+  "verifiedAtUtc": "2026-10-28T12:01:36.272Z",
+  "connectionTarget": "postgresql://postgres:***@db.hzlxioeqyaqddkqdgmfn.supabase.co:5432/postgres",
+  "postgisVersion": "POSTGIS=\"3.3.7 a0c7967\" [EXTENSION] PGSQL=\"170\" GEOS=\"3.14.1-CAPI-1.20.5\" PROJ=\"9.7.1\" LIBXML=\"2.15.1\" LIBJSON=\"0.18\" LIBPROTOBUF=\"1.5.2\" WAGYU=\"0.5.0 (Internal)\"",
+  "tableCounts": {
+    "data_sources": 4,
+    "administrative_areas": 16,
+    "monitoring_stations": 10,
+    "sensors": 10,
+    "ingestion_jobs": 1,
+    "pm25_observations": 78,
+    "air_quality_model_runs": 1,
+    "model_grid_cells": 4,
+    "model_pm25_values": 52,
+    "weather_data": 36,
+    "air_quality_alerts": 3,
+    "users": 2,
+    "user_favorite_locations": 0,
+    "audit_logs": 0
+  },
+  "spatialInspectionSample": {
+    "containing_area": {
+      "code": "HN-HBT",
+      "name_vi": "Hai Bà Trưng",
+      "area_sq_km": 13.81
+    },
+    "containing_cams_cell": {
+      "cell_code": "CAMS_210_1058",
+      "label_vi": "Ô lưới CAMS Trung tâm & Đông Hà Nội (21.0°N, 105.8°E — ~40 km)",
+      "resolution_deg": 0.4
+    },
+    "nearest_stations_15km": [
+      {
+        "external_station_id": "4946813",
+        "name": "Số 1 đường Giải Phóng - P. Bạch Mai (ĐHBK)",
+        "freshness_status": "FRESH",
+        "distance_km": 0
+      },
+      {
+        "external_station_id": "2161292",
+        "name": "Số 46, phố Lưu Quang Vũ",
+        "freshness_status": "STALE",
+        "distance_km": 4.46
+      },
+      {
+        "external_station_id": "4946812",
+        "name": "Công viên Nhân Chính - Khuất Duy Tiến",
+        "freshness_status": "FRESH",
+        "distance_km": 4.91
+      },
+      {
+        "external_station_id": "A579667",
+        "name": "Phố Nguyễn Duy Trinh - Hoàng Mai",
+        "freshness_status": "FRESH",
+        "distance_km": 5.28
+      },
+      {
+        "external_station_id": "A476599",
+        "name": "Mộ Lao - Hà Đông",
+        "freshness_status": "FRESH",
+        "distance_km": 6.27
+      }
+    ]
+  },
+  "areaSpatialAggregation": [
+    {
+      "code": "HN-GL",
+      "name_vi": "Gia Lâm",
+      "station_count": 1,
+      "avg_observed_pm25_ugm3": 49.4
+    },
+    {
+      "code": "HN-HBT",
+      "name_vi": "Hai Bà Trưng",
+      "station_count": 1,
+      "avg_observed_pm25_ugm3": 44.28
+    },
+    {
+      "code": "HN-BTL",
+      "name_vi": "Bắc Từ Liêm",
+      "station_count": 1,
+      "avg_observed_pm25_ugm3": 40.36
+    },
+    {
+      "code": "HN-HD",
+      "name_vi": "Hà Đông",
+      "station_count": 1,
+      "avg_observed_pm25_ugm3": 39.2
+    },
+    {
+      "code": "HN-TX",
+      "name_vi": "Thanh Xuân",
+      "station_count": 2,
+      "avg_observed_pm25_ugm3": 36.4
+    },
+    {
+      "code": "HN-CG",
+      "name_vi": "Cầu Giấy",
+      "station_count": 1,
+      "avg_observed_pm25_ugm3": 35.66
+    },
+    {
+      "code": "HN-TH",
+      "name_vi": "Tây Hồ",
+      "station_count": 2,
+      "avg_observed_pm25_ugm3": 35.1
+    },
+    {
+      "code": "HN-HM",
+      "name_vi": "Hoàng Mai",
+      "station_count": 1,
+      "avg_observed_pm25_ugm3": 33.5
+    },
+    {
+      "code": "HN-LB",
+      "name_vi": "Long Biên",
+      "station_count": 1,
+      "avg_observed_pm25_ugm3": null
+    }
+  ]
+}
