@@ -203,5 +203,51 @@ describe('Hanoi PM2.5 WebGIS Backend API & Live PostGIS Integration Tests', () =
     expect(deleteRes.status).toBe(200);
     expect(deleteRes.body.data.deletedId).toBe(favId);
   });
+
+  it('GET and PATCH /api/v1/admin/alert-rules updates alert rule thresholds and writes an immutable entry to audit_logs', async () => {
+    const adminLogin = await request(app).post('/api/v1/auth/login').send({
+      email: 'admin@hanoi-pm25-gis.vn',
+      password: 'HanoiAdmin@2026',
+    });
+    expect(adminLogin.status).toBe(200);
+    const adminToken = adminLogin.body.data.accessToken as string;
+
+    const listRes = await request(app)
+      .get('/api/v1/admin/alert-rules')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(listRes.status).toBe(200);
+    expect(Array.isArray(listRes.body.data)).toBe(true);
+    expect(listRes.body.data.length).toBeGreaterThanOrEqual(4);
+
+    const targetRule = listRes.body.data[0] as {
+      id: string;
+      code: string;
+      thresholdValue: number;
+      isActive: boolean;
+    };
+
+    const patchRes = await request(app)
+      .patch(`/api/v1/admin/alert-rules/${targetRule.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        thresholdValue: targetRule.thresholdValue,
+        isActive: targetRule.isActive,
+        reason: 'Kiểm thử tích hợp Stage 7 ghi nhật ký kiểm toán audit_logs',
+      });
+    expect(patchRes.status).toBe(200);
+    expect(patchRes.body.data.code).toBe(targetRule.code);
+
+    const logsRes = await request(app)
+      .get('/api/v1/admin/audit-logs')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(logsRes.status).toBe(200);
+    const latestAudit = logsRes.body.data[0] as {
+      action_type: string;
+      target_table: string;
+      reason: string;
+    };
+    expect(latestAudit.action_type).toBe('UPDATE_ALERT_RULE');
+    expect(latestAudit.target_table).toBe('alert_rules');
+  });
 });
 

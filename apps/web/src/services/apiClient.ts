@@ -308,3 +308,360 @@ export async function fetchLiveDataSourcesFromApi(): Promise<
     notesVi: s.notesVi ?? '',
   }));
 }
+
+export interface AdminIngestionJobItem {
+  id: number | string;
+  sourceCode: string;
+  sourceName: string;
+  triggerType: string;
+  status: 'SUCCESS' | 'PARTIAL_SUCCESS' | 'FAILED' | 'RUNNING';
+  recordsFetched: number;
+  recordsInserted: number;
+  recordsFlaggedQc: number;
+  durationMs: number;
+  errorMessage: string | null;
+  startedAtLocal: string;
+}
+
+export interface AdminAuditLogItem {
+  id: number | string;
+  actionType: string;
+  targetTable: string;
+  targetId: string;
+  oldValues: Record<string, unknown> | null;
+  newValues: Record<string, unknown> | null;
+  reason: string;
+  createdAtLocal: string;
+  actorEmail: string;
+  actorName: string;
+}
+
+export interface AdminAlertRuleItem {
+  id: string;
+  code: string;
+  nameVi: string;
+  alertCategory: string;
+  metricName: string;
+  comparisonOperator: string;
+  thresholdValue: number;
+  unit: string;
+  severity: string;
+  isActive: boolean;
+  descriptionVi: string;
+}
+
+export const FALLBACK_ADMIN_INGESTION_JOBS: AdminIngestionJobItem[] = [
+  {
+    id: 101,
+    sourceCode: 'OPENAQ_V3',
+    sourceName: 'OpenAQ API v3 (Trạm quan trắc thực tế)',
+    triggerType: 'SCHEDULED_CRON',
+    status: 'SUCCESS',
+    recordsFetched: 43,
+    recordsInserted: 43,
+    recordsFlaggedQc: 0,
+    durationMs: 1840,
+    errorMessage: null,
+    startedAtLocal: '28/10/2026 19:20:05',
+  },
+  {
+    id: 102,
+    sourceCode: 'WAQI_API',
+    sourceName: 'World Air Quality Index (WAQI / AQICN)',
+    triggerType: 'SCHEDULED_CRON',
+    status: 'SUCCESS',
+    recordsFetched: 11,
+    recordsInserted: 10,
+    recordsFlaggedQc: 1,
+    durationMs: 2150,
+    errorMessage: null,
+    startedAtLocal: '28/10/2026 19:20:08',
+  },
+  {
+    id: 103,
+    sourceCode: 'OPEN_METEO_CAMS',
+    sourceName: 'Open-Meteo Air Quality (Mô hình CAMS 0.4°)',
+    triggerType: 'SCHEDULED_CRON',
+    status: 'SUCCESS',
+    recordsFetched: 96,
+    recordsInserted: 96,
+    recordsFlaggedQc: 0,
+    durationMs: 1620,
+    errorMessage: null,
+    startedAtLocal: '28/10/2026 19:20:11',
+  },
+  {
+    id: 104,
+    sourceCode: 'OPEN_METEO_WEATHER',
+    sourceName: 'Open-Meteo Forecast (Khí tượng Hà Nội)',
+    triggerType: 'SCHEDULED_CRON',
+    status: 'SUCCESS',
+    recordsFetched: 48,
+    recordsInserted: 48,
+    recordsFlaggedQc: 0,
+    durationMs: 1290,
+    errorMessage: null,
+    startedAtLocal: '28/10/2026 19:20:13',
+  },
+];
+
+export const FALLBACK_ADMIN_ALERT_RULES: AdminAlertRuleItem[] = [
+  {
+    id: '00000000-0000-0000-0000-000000000201',
+    code: 'RULE_PM25_QCVN_EXCEEDED',
+    nameVi: 'Vượt quy chuẩn QCVN 05:2023/BTNMT (24h)',
+    alertCategory: 'PM25_CONCENTRATION',
+    metricName: 'pm25_ugm3',
+    comparisonOperator: '>',
+    thresholdValue: 50,
+    unit: 'µg/m³',
+    severity: 'UNHEALTHY_SENSITIVE',
+    isActive: true,
+    descriptionVi:
+      'Phát cảnh báo khi nồng độ PM2.5 quan trắc vượt giới hạn 50 µg/m³ theo QCVN 05:2023/BTNMT.',
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000202',
+    code: 'RULE_PM25_WHO_EXCEEDED',
+    nameVi: 'Vượt khuyến nghị WHO 2021 (24h)',
+    alertCategory: 'PM25_CONCENTRATION',
+    metricName: 'pm25_ugm3',
+    comparisonOperator: '>',
+    thresholdValue: 15,
+    unit: 'µg/m³',
+    severity: 'MODERATE',
+    isActive: true,
+    descriptionVi:
+      'Theo dõi mức vượt ngưỡng khuyến nghị 15 µg/m³ của Tổ chức Y tế Thế giới (WHO 2021).',
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000203',
+    code: 'RULE_VN_AQI_POOR',
+    nameVi: 'Chỉ số VN_AQI chạm ngưỡng Xấu (>= 151)',
+    alertCategory: 'AQI_THRESHOLD',
+    metricName: 'vn_aqi',
+    comparisonOperator: '>=',
+    thresholdValue: 151,
+    unit: 'VN_AQI',
+    severity: 'UNHEALTHY',
+    isActive: true,
+    descriptionVi:
+      'Cảnh báo sức khỏe cộng đồng khi chỉ số VN_AQI NowCast đạt mức Xấu (>= 151) theo QĐ 1459/QĐ-TCMT.',
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000204',
+    code: 'RULE_CAMS_FORECAST_SPIKE',
+    nameVi: 'Dự báo mô hình CAMS tăng cao 24h tới',
+    alertCategory: 'MODEL_FORECAST',
+    metricName: 'model_pm25_ugm3',
+    comparisonOperator: '>=',
+    thresholdValue: 75,
+    unit: 'µg/m³',
+    severity: 'UNHEALTHY',
+    isActive: true,
+    descriptionVi:
+      'Cảnh báo sớm từ mô hình số trị CAMS 0.4° khi dự báo PM2.5 trong 24h tới đạt >= 75 µg/m³.',
+  },
+];
+
+export const FALLBACK_ADMIN_AUDIT_LOGS: AdminAuditLogItem[] = [
+  {
+    id: 1,
+    actionType: 'SYSTEM_SEED_INITIALIZED',
+    targetTable: 'monitoring_stations',
+    targetId: 'HANOI_57_STATIONS',
+    oldValues: null,
+    newValues: { withinHanoi: 57, outsideHanoiFlagged: 1 },
+    reason:
+      'Khởi tạo cơ sở dữ liệu không gian PostGIS và nạp dữ liệu quan trắc thực tế tại Hà Nội',
+    createdAtLocal: '28/10/2026 19:20:00',
+    actorEmail: 'admin@hanoi-pm25-gis.vn',
+    actorName: 'Quản trị viên Hệ thống WebGIS Hà Nội',
+  },
+  {
+    id: 2,
+    actionType: 'TRIGGER_INGESTION_PIPELINE',
+    targetTable: 'ingestion_jobs',
+    targetId: 'BATCH_RUN',
+    oldValues: null,
+    newValues: {
+      sources: [
+        { sourceCode: 'OPENAQ_V3', status: 'SUCCESS' },
+        { sourceCode: 'WAQI_API', status: 'SUCCESS' },
+        { sourceCode: 'OPEN_METEO_CAMS', status: 'SUCCESS' },
+        { sourceCode: 'OPEN_METEO_WEATHER', status: 'SUCCESS' },
+      ],
+    },
+    reason: 'Đồng bộ dữ liệu thực tế từ 4 nguồn công khai vào Supabase PostGIS',
+    createdAtLocal: '28/10/2026 19:20:15',
+    actorEmail: 'admin@hanoi-pm25-gis.vn',
+    actorName: 'Quản trị viên Hệ thống WebGIS Hà Nội',
+  },
+];
+
+export async function loginWithRoleAccount(
+  role: 'USER' | 'ADMIN'
+): Promise<{
+  accessToken: string;
+  email: string;
+  fullName: string;
+  role: 'USER' | 'ADMIN';
+}> {
+  const credentials =
+    role === 'ADMIN'
+      ? {
+          email: 'admin@hanoi-pm25-gis.vn',
+          password: 'HanoiAdmin@2026',
+        }
+      : {
+          email: 'sinhvien@hanoi-pm25-gis.vn',
+          password: 'SinhVien@2026',
+        };
+
+  const res = await fetch(`${API_BASE}/v1/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(credentials),
+  });
+  if (!res.ok) {
+    throw new Error(`POST /v1/auth/login failed with status ${res.status}`);
+  }
+  const json = await res.json();
+  return {
+    accessToken: json.data.accessToken,
+    email: json.data.user.email,
+    fullName: json.data.user.fullName,
+    role: json.data.user.role,
+  };
+}
+
+export async function fetchAdminOverviewFromApi(token: string): Promise<{
+  ingestionJobs: AdminIngestionJobItem[];
+  auditLogs: AdminAuditLogItem[];
+  alertRules: AdminAlertRuleItem[];
+}> {
+  const headers = {
+    Accept: 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+
+  const [jobsRes, logsRes, rulesRes] = await Promise.all([
+    fetch(`${API_BASE}/v1/admin/ingestion/jobs`, { headers }),
+    fetch(`${API_BASE}/v1/admin/audit-logs`, { headers }),
+    fetch(`${API_BASE}/v1/admin/alert-rules`, { headers }),
+  ]);
+
+  if (!jobsRes.ok || !logsRes.ok || !rulesRes.ok) {
+    throw new Error('Failed to fetch admin overview resources');
+  }
+
+  const [jobsJson, logsJson, rulesJson] = await Promise.all([
+    jobsRes.json(),
+    logsRes.json(),
+    rulesRes.json(),
+  ]);
+
+  const ingestionJobs: AdminIngestionJobItem[] = (jobsJson.data ?? []).map(
+    (j: Record<string, unknown>) => ({
+      id: j.id as number | string,
+      sourceCode: String(j.source_code ?? ''),
+      sourceName: String(j.source_name ?? j.source_code ?? ''),
+      triggerType: String(j.trigger_type ?? 'SCHEDULED_CRON'),
+      status: (j.status as AdminIngestionJobItem['status']) ?? 'SUCCESS',
+      recordsFetched: Number(j.records_fetched ?? 0),
+      recordsInserted: Number(j.records_inserted ?? 0),
+      recordsFlaggedQc: Number(j.records_flagged_qc ?? 0),
+      durationMs: Number(j.duration_ms ?? 0),
+      errorMessage: j.error_message ? String(j.error_message) : null,
+      startedAtLocal:
+        formatUtcToVietnamTime(String(j.started_at_utc ?? '')) ?? 'Gần đây',
+    })
+  );
+
+  const auditLogs: AdminAuditLogItem[] = (logsJson.data ?? []).map(
+    (l: Record<string, unknown>) => ({
+      id: l.id as number | string,
+      actionType: String(l.action_type ?? ''),
+      targetTable: String(l.target_table ?? ''),
+      targetId: String(l.target_id ?? ''),
+      oldValues: (l.old_values as Record<string, unknown>) ?? null,
+      newValues: (l.new_values as Record<string, unknown>) ?? null,
+      reason: String(l.reason ?? ''),
+      createdAtLocal:
+        formatUtcToVietnamTime(String(l.created_at_utc ?? '')) ?? 'Gần đây',
+      actorEmail: String(l.actor_email ?? 'admin@hanoi-pm25-gis.vn'),
+      actorName: String(l.actor_name ?? 'Quản trị viên'),
+    })
+  );
+
+  const alertRules: AdminAlertRuleItem[] = (rulesJson.data ?? []) as AdminAlertRuleItem[];
+
+  return {
+    ingestionJobs,
+    auditLogs,
+    alertRules,
+  };
+}
+
+export async function triggerManualIngestionFromApi(
+  token: string
+): Promise<{ totalDurationMs: number }> {
+  const res = await fetch(`${API_BASE}/v1/admin/ingestion/trigger`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({}),
+  });
+  if (!res.ok) {
+    throw new Error(`POST /v1/admin/ingestion/trigger failed (${res.status})`);
+  }
+  const json = await res.json();
+  return {
+    totalDurationMs: Number(json.data?.totalDurationMs ?? 0),
+  };
+}
+
+export async function updateAlertStatusFromApi(
+  token: string,
+  alertId: string,
+  status: 'ACTIVE' | 'ACKNOWLEDGED' | 'RESOLVED',
+  reason: string
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/v1/admin/alerts/${alertId}/status`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ status, reason }),
+  });
+  if (!res.ok) {
+    throw new Error(`PATCH /v1/admin/alerts/${alertId}/status failed`);
+  }
+}
+
+export async function updateAlertRuleFromApi(
+  token: string,
+  ruleId: string,
+  payload: { thresholdValue?: number; isActive?: boolean; reason: string }
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/v1/admin/alert-rules/${ruleId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    throw new Error(`PATCH /v1/admin/alert-rules/${ruleId} failed`);
+  }
+}

@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { AdminDashboardModal } from './components/AdminDashboardModal.js';
 import { AnalyticsDrawer } from './components/AnalyticsDrawer.js';
 import { FloatingHeader } from './components/FloatingHeader.js';
 import { LayerSidebar } from './components/LayerSidebar.js';
@@ -39,6 +40,9 @@ export const App: React.FC = () => {
 
       {/* 7. Multi-Tab Analytics, Meteorology, Comparison, Alert & Audit Drawer */}
       <AnalyticsDrawer />
+
+      {/* 8. RBAC Admin Control Center & Immutable Audit Trail Modal */}
+      <AdminDashboardModal />
     </main>
   );
 };

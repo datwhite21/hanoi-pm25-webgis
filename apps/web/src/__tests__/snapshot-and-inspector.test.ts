@@ -55,5 +55,29 @@ describe('Hanoi WebGIS Snapshot & Spatial Point Inspector', () => {
       afterArea.selectedAreaStats?.modeledBackground.spatialResolutionDeg
     ).toBe(0.4);
   });
+
+  it('manages RBAC roles, alert acknowledgments, rule updates, and audit logs in useWebGisStore', async () => {
+    const store = useWebGisStore.getState();
+    const initialLogsCount = store.adminAuditLogs.length;
+
+    store.setUserRole('ADMIN');
+    expect(useWebGisStore.getState().userRole).toBe('ADMIN');
+    expect(useWebGisStore.getState().authUserEmail).toBe(
+      'admin@hanoi-pm25-gis.vn'
+    );
+
+    const firstRule = useWebGisStore.getState().adminAlertRules[0];
+    await useWebGisStore
+      .getState()
+      .toggleOrUpdateAlertRule(firstRule.id, {
+        thresholdValue: 55,
+        reason: 'Kiểm thử cập nhật quy tắc Giai đoạn 7',
+      });
+
+    const updatedState = useWebGisStore.getState();
+    expect(updatedState.adminAlertRules[0].thresholdValue).toBe(55);
+    expect(updatedState.adminAuditLogs.length).toBeGreaterThan(initialLogsCount);
+    expect(updatedState.adminAuditLogs[0].actionType).toBe('UPDATE_ALERT_RULE');
+  });
 });
 

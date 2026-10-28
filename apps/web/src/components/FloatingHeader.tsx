@@ -31,6 +31,8 @@ export const FloatingHeader: React.FC = () => {
     openDrawer,
     userRole,
     setUserRole,
+    openAdminModal,
+    adminAuditLogs,
   } = useWebGisStore();
 
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -258,7 +260,7 @@ export const FloatingHeader: React.FC = () => {
           <span>Phân tích & So sánh</span>
         </button>
 
-        {/* Role Switcher (Guest / User / Admin) for Demo & RBAC inspection */}
+        {/* Role Switcher (Guest / User / Admin) + Admin Control Center Trigger */}
         <div className="flex items-center gap-1 px-2 py-1.5 rounded-2xl bg-slate-900/90 border border-slate-700/70 backdrop-blur-md text-xs shadow-xl">
           {userRole === 'ADMIN' ? (
             <ShieldCheck className="w-3.5 h-3.5 text-purple-400 ml-1" />
@@ -283,6 +285,22 @@ export const FloatingHeader: React.FC = () => {
               Quản trị viên
             </option>
           </select>
+
+          <button
+            type="button"
+            onClick={openAdminModal}
+            className={`ml-1 px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1 ${
+              userRole === 'ADMIN'
+                ? 'bg-purple-500 text-slate-950 shadow'
+                : 'bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/40'
+            }`}
+            title="Mở Trung tâm Quản trị RBAC & Nhật ký kiểm toán (audit_logs)"
+          >
+            <span>Quản trị RBAC</span>
+            <span className="px-1 rounded bg-slate-950/30 text-[10px]">
+              {adminAuditLogs.length}
+            </span>
+          </button>
         </div>
       </div>
     </header>
