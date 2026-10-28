@@ -45,3 +45,4 @@ export async function checkDbHealth(): Promise<{
     latencyMs: Date.now() - start,
   };
 }
+

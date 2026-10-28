@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node --watch --import tsx src/server.ts",
     "start": "node --import tsx src/server.ts",
+    "ingest:now": "node --import tsx src/ingestion/runLiveIngestionCli.ts",
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit"
   },
@@ -29,3 +30,4 @@
     "typescript": "^5.7.2"
   }
 }
+

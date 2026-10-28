@@ -69,14 +69,14 @@ ON CONFLICT (code) DO UPDATE SET
 -- -----------------------------------------------------------------------------
 -- 2. SEED ADMINISTRATIVE AREAS (Level 1 Hanoi + 15 Key Sub-Areas in WGS84)
 -- -----------------------------------------------------------------------------
--- Level 1: Thành phố Hà Nội
+-- Level 1: Thành phố Hà Nội (Đa giác ranh giới khái quát bám theo Ba Vì - Sông Hồng - Sóc Sơn, loại bỏ vùng Việt Trì / Phú Thọ ở góc Tây Bắc)
 INSERT INTO administrative_areas (code, name_vi, name_en, admin_level, geom, effective_date, source_dataset, license)
 VALUES (
   'VN-HN',
   'Thành phố Hà Nội',
   'Hanoi City',
   1,
-  ST_Multi(ST_GeomFromText('POLYGON((105.28 20.56, 106.02 20.56, 106.02 21.39, 105.28 21.39, 105.28 20.56))', 4326)),
+  ST_Multi(ST_GeomFromText('POLYGON((105.28 20.56, 106.02 20.56, 106.02 21.39, 105.74 21.39, 105.52 21.26, 105.28 21.22, 105.28 20.56))', 4326)),
   '2025-01-01',
   'OCHA COD-AB / GADM / Hanoi GIS',
   'CC-BY-4.0'
@@ -566,3 +566,4 @@ VALUES
 ON CONFLICT (email) DO NOTHING;
 
 COMMIT;
+

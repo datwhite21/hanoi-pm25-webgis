@@ -4,6 +4,7 @@ import {
   calculateNowCastPm25,
   calculateVnAqiFromPm25,
   classifyPm25Level,
+  convertUsAqiToApproximatePm25UgM3,
   evaluateFreshnessStatus,
   evaluatePm25QualityFlag,
 } from '../aqi.js';
@@ -80,5 +81,13 @@ describe('@hanoi-pm25/shared — Scientific AQI, NowCast & Quality Control', () 
     const distKm = calculateHaversineDistanceKm(21.0285, 105.8542, 21.0031, 105.7947);
     expect(distKm).toBeGreaterThan(6.5);
     expect(distKm).toBeLessThan(7.1);
+  });
+
+  it('converts US-EPA AQI sub-index to reference PM2.5 ug/m3 for DERIVED_FROM_US_AQI stations', () => {
+    expect(convertUsAqiToApproximatePm25UgM3(50)).toBeCloseTo(12.0, 1);
+    expect(convertUsAqiToApproximatePm25UgM3(100)).toBeCloseTo(35.4, 1);
+    const unisAqi122 = convertUsAqiToApproximatePm25UgM3(122);
+    expect(unisAqi122).toBeGreaterThan(43);
+    expect(unisAqi122).toBeLessThan(45);
   });
 });

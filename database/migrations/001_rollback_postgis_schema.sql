@@ -20,3 +20,4 @@ DROP TABLE IF EXISTS administrative_areas CASCADE;
 DROP TABLE IF EXISTS data_sources CASCADE;
 
 COMMIT;
+

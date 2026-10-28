@@ -214,3 +214,4 @@ main().catch((err) => {
   console.error('[PostGIS Migration Failed]:', err.message);
   process.exit(1);
 });
+

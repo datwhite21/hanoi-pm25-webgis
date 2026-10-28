@@ -1,0 +1,79 @@
+{
+  "report": {
+    "startedAtUtc": "2026-10-28T12:26:47.857Z",
+    "finishedAtUtc": "2026-10-28T12:27:14.583Z",
+    "totalDurationMs": 26725,
+    "triggerType": "MANUAL_ADMIN",
+    "sources": [
+      {
+        "sourceCode": "OPENAQ_V3",
+        "jobId": "21dd7b58-463d-405b-b3e5-47db7dcf9d9d",
+        "status": "SUCCESS",
+        "metrics": {
+          "sourceCode": "OPENAQ_V3",
+          "recordsFetched": 72,
+          "recordsInserted": 5,
+          "recordsFlaggedQc": 0,
+          "stationsSynced": 43,
+          "activeStationsCount": 3
+        },
+        "durationMs": 14243
+      },
+      {
+        "sourceCode": "WAQI_API",
+        "jobId": "d4466ab4-23cd-4fac-8aa9-686ddd7d613e",
+        "status": "SUCCESS",
+        "metrics": {
+          "sourceCode": "WAQI_API",
+          "recordsFetched": 11,
+          "recordsInserted": 8,
+          "recordsFlaggedQc": 1,
+          "stationsSynced": 11,
+          "activeStationsCount": 6
+        },
+        "durationMs": 4638
+      },
+      {
+        "sourceCode": "OPEN_METEO_CAMS",
+        "jobId": "92a93928-40f0-4c8c-bedc-0665687a37b9",
+        "status": "SUCCESS",
+        "metrics": {
+          "sourceCode": "OPEN_METEO_CAMS",
+          "recordsFetched": 288,
+          "recordsInserted": 96,
+          "recordsFlaggedQc": 0,
+          "stationsSynced": 4,
+          "activeStationsCount": 4
+        },
+        "durationMs": 2754
+      },
+      {
+        "sourceCode": "OPEN_METEO_WEATHER",
+        "jobId": "ed3e3b7f-8a2f-4e00-b64f-8c5c702a20cf",
+        "status": "SUCCESS",
+        "metrics": {
+          "sourceCode": "OPEN_METEO_WEATHER",
+          "recordsFetched": 48,
+          "recordsInserted": 48,
+          "recordsFlaggedQc": 0,
+          "stationsSynced": 1,
+          "activeStationsCount": 1
+        },
+        "durationMs": 1495
+      }
+    ],
+    "alertsEvaluatedCount": 7
+  },
+  "dbSummary": {
+    "total_stations": 58,
+    "within_hanoi_stations": 57,
+    "outside_hanoi_stations": 1,
+    "fresh_stations": 13,
+    "total_observations": 163,
+    "valid_observations": 162,
+    "flagged_qc_observations": 1,
+    "total_model_values": 436,
+    "total_weather_rows": 48,
+    "active_alerts": 10
+  }
+}

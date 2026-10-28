@@ -44,3 +44,4 @@ export const env = {
   WAQI_API_TOKEN: process.env.WAQI_API_TOKEN || '',
   CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
 };
+

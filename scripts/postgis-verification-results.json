@@ -1,19 +1,19 @@
 {
-  "verifiedAtUtc": "2026-10-28T12:01:36.272Z",
+  "verifiedAtUtc": "2026-10-28T12:26:13.141Z",
   "connectionTarget": "postgresql://postgres:***@db.hzlxioeqyaqddkqdgmfn.supabase.co:5432/postgres",
   "postgisVersion": "POSTGIS=\"3.3.7 a0c7967\" [EXTENSION] PGSQL=\"170\" GEOS=\"3.14.1-CAPI-1.20.5\" PROJ=\"9.7.1\" LIBXML=\"2.15.1\" LIBJSON=\"0.18\" LIBPROTOBUF=\"1.5.2\" WAGYU=\"0.5.0 (Internal)\"",
   "tableCounts": {
     "data_sources": 4,
     "administrative_areas": 16,
-    "monitoring_stations": 10,
-    "sensors": 10,
-    "ingestion_jobs": 1,
-    "pm25_observations": 78,
-    "air_quality_model_runs": 1,
+    "monitoring_stations": 58,
+    "sensors": 112,
+    "ingestion_jobs": 13,
+    "pm25_observations": 163,
+    "air_quality_model_runs": 4,
     "model_grid_cells": 4,
-    "model_pm25_values": 52,
+    "model_pm25_values": 340,
     "weather_data": 36,
-    "air_quality_alerts": 3,
+    "air_quality_alerts": 10,
     "users": 2,
     "user_favorite_locations": 0,
     "audit_logs": 0
@@ -37,28 +37,28 @@
         "distance_km": 0
       },
       {
-        "external_station_id": "2161292",
-        "name": "Số 46, phố Lưu Quang Vũ",
-        "freshness_status": "STALE",
-        "distance_km": 4.46
+        "external_station_id": "WAQI_-476341",
+        "name": "Hà Nội: ĐHBK cổng Parabol đường Giải Phóng (KK)",
+        "freshness_status": "FRESH",
+        "distance_km": 0.07
       },
       {
-        "external_station_id": "4946812",
-        "name": "Công viên Nhân Chính - Khuất Duy Tiến",
-        "freshness_status": "FRESH",
-        "distance_km": 4.91
+        "external_station_id": "2161303",
+        "name": "Kim Liên",
+        "freshness_status": "UNAVAILABLE",
+        "distance_km": 0.65
       },
       {
-        "external_station_id": "A579667",
-        "name": "Phố Nguyễn Duy Trinh - Hoàng Mai",
-        "freshness_status": "FRESH",
-        "distance_km": 5.28
+        "external_station_id": "2161313",
+        "name": "Tân Mai",
+        "freshness_status": "UNAVAILABLE",
+        "distance_km": 2.37
       },
       {
-        "external_station_id": "A476599",
-        "name": "Mộ Lao - Hà Đông",
-        "freshness_status": "FRESH",
-        "distance_km": 6.27
+        "external_station_id": "2161295",
+        "name": "Đầm Trấu",
+        "freshness_status": "UNAVAILABLE",
+        "distance_km": 2.44
       }
     ]
   },
@@ -67,54 +67,84 @@
       "code": "HN-GL",
       "name_vi": "Gia Lâm",
       "station_count": 1,
-      "avg_observed_pm25_ugm3": 49.4
-    },
-    {
-      "code": "HN-HBT",
-      "name_vi": "Hai Bà Trưng",
-      "station_count": 1,
-      "avg_observed_pm25_ugm3": 44.28
-    },
-    {
-      "code": "HN-BTL",
-      "name_vi": "Bắc Từ Liêm",
-      "station_count": 1,
-      "avg_observed_pm25_ugm3": 40.36
+      "avg_observed_pm25_ugm3": 64.3
     },
     {
       "code": "HN-HD",
       "name_vi": "Hà Đông",
-      "station_count": 1,
-      "avg_observed_pm25_ugm3": 39.2
+      "station_count": 3,
+      "avg_observed_pm25_ugm3": 49.29
     },
     {
-      "code": "HN-TX",
-      "name_vi": "Thanh Xuân",
-      "station_count": 2,
-      "avg_observed_pm25_ugm3": 36.4
-    },
-    {
-      "code": "HN-CG",
-      "name_vi": "Cầu Giấy",
-      "station_count": 1,
-      "avg_observed_pm25_ugm3": 35.66
+      "code": "HN-BTL",
+      "name_vi": "Bắc Từ Liêm",
+      "station_count": 4,
+      "avg_observed_pm25_ugm3": 40.36
     },
     {
       "code": "HN-TH",
       "name_vi": "Tây Hồ",
-      "station_count": 2,
-      "avg_observed_pm25_ugm3": 35.1
+      "station_count": 6,
+      "avg_observed_pm25_ugm3": 38.84
     },
     {
       "code": "HN-HM",
       "name_vi": "Hoàng Mai",
-      "station_count": 1,
-      "avg_observed_pm25_ugm3": 33.5
+      "station_count": 3,
+      "avg_observed_pm25_ugm3": 36.53
+    },
+    {
+      "code": "HN-CG",
+      "name_vi": "Cầu Giấy",
+      "station_count": 6,
+      "avg_observed_pm25_ugm3": 35.66
+    },
+    {
+      "code": "HN-TX",
+      "name_vi": "Thanh Xuân",
+      "station_count": 4,
+      "avg_observed_pm25_ugm3": 35.04
+    },
+    {
+      "code": "HN-HBT",
+      "name_vi": "Hai Bà Trưng",
+      "station_count": 4,
+      "avg_observed_pm25_ugm3": 28.73
     },
     {
       "code": "HN-LB",
       "name_vi": "Long Biên",
+      "station_count": 3,
+      "avg_observed_pm25_ugm3": 1.92
+    },
+    {
+      "code": "HN-DA",
+      "name_vi": "Đông Anh",
       "station_count": 1,
+      "avg_observed_pm25_ugm3": null
+    },
+    {
+      "code": "HN-DD",
+      "name_vi": "Đống Đa",
+      "station_count": 5,
+      "avg_observed_pm25_ugm3": null
+    },
+    {
+      "code": "HN-SS",
+      "name_vi": "Sóc Sơn",
+      "station_count": 1,
+      "avg_observed_pm25_ugm3": null
+    },
+    {
+      "code": "HN-BD",
+      "name_vi": "Ba Đình",
+      "station_count": 2,
+      "avg_observed_pm25_ugm3": null
+    },
+    {
+      "code": "HN-HK",
+      "name_vi": "Hoàn Kiếm",
+      "station_count": 5,
       "avg_observed_pm25_ugm3": null
     }
   ]

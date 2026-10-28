@@ -330,3 +330,4 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_created_desc
   ON audit_logs (created_at_utc DESC);
 
 COMMIT;
+

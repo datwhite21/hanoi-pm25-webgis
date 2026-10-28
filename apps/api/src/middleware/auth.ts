@@ -126,3 +126,4 @@ export function requireRole(...allowedRoles: Array<'USER' | 'ADMIN'>) {
     });
   };
 }
+

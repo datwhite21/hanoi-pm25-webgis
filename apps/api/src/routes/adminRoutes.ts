@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { dbQuery } from '../db/pool.js';
 import { requireRole } from '../middleware/auth.js';
 import { ApiError, sendSuccess } from '../middleware/errorHandler.js';
+import { runFullIngestionPipeline } from '../ingestion/ingestionOrchestrator.js';
 
 export const adminRouter = Router();
 
@@ -191,3 +192,90 @@ adminRouter.get('/v1/admin/audit-logs', async (_req, res, next) => {
     next(err);
   }
 });
+
+// -----------------------------------------------------------------------------
+// 4. POST /api/v1/admin/ingestion/trigger & GET /api/v1/admin/ingestion/jobs
+// -----------------------------------------------------------------------------
+adminRouter.post('/v1/admin/ingestion/trigger', async (req, res, next) => {
+  try {
+    const bodySchema = z
+      .object({
+        sources: z
+          .array(
+            z.enum([
+              'OPENAQ_V3',
+              'WAQI_API',
+              'OPEN_METEO_CAMS',
+              'OPEN_METEO_WEATHER',
+            ])
+          )
+          .optional(),
+      })
+      .optional();
+    const parsed = bodySchema.parse(req.body);
+
+    const report = await runFullIngestionPipeline(
+      'MANUAL_ADMIN',
+      parsed?.sources
+    );
+
+    await dbQuery(
+      `
+      INSERT INTO audit_logs (
+        actor_user_id,
+        action_type,
+        target_table,
+        target_id,
+        new_values,
+        reason,
+        ip_address
+      )
+      VALUES ($1::uuid, 'TRIGGER_INGESTION_PIPELINE', 'ingestion_jobs', 'BATCH_RUN', $2::jsonb, 'Kích hoạt thu thập dữ liệu thủ công bởi Quản trị viên', $3)
+      `,
+      [
+        req.user!.sub,
+        JSON.stringify({
+          sources: report.sources.map((s) => ({
+            sourceCode: s.sourceCode,
+            status: s.status,
+          })),
+          totalDurationMs: report.totalDurationMs,
+        }),
+        req.ip || '127.0.0.1',
+      ]
+    );
+
+    sendSuccess(res, report);
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.get('/v1/admin/ingestion/jobs', async (_req, res, next) => {
+  try {
+    const result = await dbQuery(`
+      SELECT
+        ij.id,
+        ds.code AS source_code,
+        ds.name AS source_name,
+        ij.trigger_type,
+        ij.status,
+        ij.records_fetched,
+        ij.records_inserted,
+        ij.records_flagged_qc,
+        ij.duration_ms,
+        ij.error_message,
+        ij.started_at_utc,
+        ij.finished_at_utc
+      FROM ingestion_jobs ij
+      JOIN data_sources ds ON ds.id = ij.data_source_id
+      ORDER BY ij.started_at_utc DESC
+      LIMIT 30
+    `);
+    sendSuccess(res, result.rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
+

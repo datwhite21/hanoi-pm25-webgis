@@ -17,6 +17,7 @@
     "test": "vitest run",
     "typecheck": "npm --workspace=@hanoi-pm25/shared run typecheck && npm --workspace=@hanoi-pm25/api run typecheck && npm --workspace=@hanoi-pm25/web run typecheck",
     "db:migrate": "node scripts/migrate-and-verify-postgis.mjs",
+    "ingest:now": "npm --workspace=@hanoi-pm25/api run ingest:now",
     "verify:sources": "node scripts/verify-data-sources.mjs"
   },
   "devDependencies": {

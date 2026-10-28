@@ -289,3 +289,34 @@ export function calculateHaversineDistanceKm(
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return Number((R * c).toFixed(2));
 }
+
+const US_EPA_PM25_BREAKPOINTS: BreakpointRow[] = [
+  { bpLow: 0.0, bpHigh: 12.0, iLow: 0, iHigh: 50 },
+  { bpLow: 12.1, bpHigh: 35.4, iLow: 51, iHigh: 100 },
+  { bpLow: 35.5, bpHigh: 55.4, iLow: 101, iHigh: 150 },
+  { bpLow: 55.5, bpHigh: 150.4, iLow: 151, iHigh: 200 },
+  { bpLow: 150.5, bpHigh: 250.4, iLow: 201, iHigh: 300 },
+  { bpLow: 250.5, bpHigh: 500.4, iLow: 301, iHigh: 500 },
+];
+
+/**
+ * Converts a US-EPA PM2.5 AQI sub-index (e.g. from WAQI `iaqi.pm25.v`) into an
+ * approximate equivalent concentration in ug/m3.
+ * Must ALWAYS be paired with `value_origin = 'DERIVED_FROM_US_AQI'`.
+ */
+export function convertUsAqiToApproximatePm25UgM3(usAqi: number): number {
+  if (!Number.isFinite(usAqi) || usAqi <= 0) return 0;
+  if (usAqi >= 500) return 500.4;
+
+  for (const row of US_EPA_PM25_BREAKPOINTS) {
+    if (usAqi <= row.iHigh) {
+      const conc =
+        ((usAqi - row.iLow) / (row.iHigh - row.iLow)) *
+          (row.bpHigh - row.bpLow) +
+        row.bpLow;
+      return Number(conc.toFixed(2));
+    }
+  }
+  return 500.4;
+}
+
