@@ -271,7 +271,8 @@ export const MapCanvas: React.FC = () => {
     for (const st of filteredStations) {
       const el = document.createElement('button');
       el.type = 'button';
-      el.className = 'station-marker-btn group relative flex items-center justify-center focus:outline-none';
+      el.className =
+        'station-marker-btn group flex items-center justify-center w-9 h-9 focus:outline-none cursor-pointer';
 
       const isSelected = selectedStation?.id === st.id;
       const hasValue = st.latestPm25UgM3 !== null && !currentSlot.isForecast;
@@ -303,14 +304,14 @@ export const MapCanvas: React.FC = () => {
         st.freshnessStatus === 'STALE' || st.freshnessStatus === 'DELAYED';
 
       el.innerHTML = `
-        <div class="relative flex flex-col items-center">
+        <div class="relative flex items-center justify-center w-9 h-9">
           ${
             isFresh && displayPm25 !== null
               ? `<span class="animate-ping absolute inline-flex h-9 w-9 rounded-full opacity-35" style="background-color: ${bgColor}"></span>`
               : ''
           }
           <div
-            class="relative z-10 flex items-center justify-center min-w-[38px] h-9 px-2 rounded-full font-bold text-xs shadow-lg transition-transform duration-150 group-hover:scale-110 ${
+            class="relative z-10 flex items-center justify-center min-w-[36px] h-9 px-2 rounded-full font-bold text-xs shadow-lg transition-transform duration-150 group-hover:scale-110 ${
               isSelected ? 'scale-125 ring-2 ring-sky-400' : ''
             }"
             style="
@@ -323,7 +324,7 @@ export const MapCanvas: React.FC = () => {
           >
             ${badgeValueText}
           </div>
-          <span class="mt-1 px-1.5 py-0.5 rounded bg-slate-950/85 border border-slate-700/70 text-[10px] font-medium text-slate-200 whitespace-nowrap shadow">
+          <span class="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded bg-slate-950/90 border border-slate-700/70 text-[10px] font-medium text-slate-200 whitespace-nowrap shadow">
             ${st.name.length > 18 ? st.name.slice(0, 18) + '…' : st.name}
           </span>
         </div>
