@@ -22,7 +22,7 @@ function triggerBackgroundIngestionIfStale(): void {
   if (Date.now() - lastAutoIngestionMs < AUTO_INGEST_INTERVAL_MS) return;
   isBackgroundIngesting = true;
   lastAutoIngestionMs = Date.now();
-  runFullIngestionPipeline('SCHEDULED_CRON')
+  runFullIngestionPipeline('SCHEDULER')
     .catch(() => {
       // Ignore background refresh error; existing PostGIS records remain available
     })

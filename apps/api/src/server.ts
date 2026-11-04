@@ -27,7 +27,7 @@ async function startServer() {
       console.log(
         `[@hanoi-pm25/api] [Auto-Reload 5m] Running scheduled data ingestion into PostGIS...`
       );
-      const report = await runFullIngestionPipeline('SCHEDULED_CRON');
+      const report = await runFullIngestionPipeline('SCHEDULER');
       console.log(
         `[@hanoi-pm25/api] [Auto-Reload 5m] Completed in ${report.totalDurationMs} ms`
       );
