@@ -533,7 +533,7 @@ export interface TimelineSlot {
   windDirectionDeg: number;
   temperatureC: number;
   humidityPct: number;
-  precipitationMm?: number;
+  precipitationMm: number;
 }
 
 function formatVnDateHour(baseMs: number, offsetHours: number): {

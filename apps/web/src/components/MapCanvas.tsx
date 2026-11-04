@@ -865,23 +865,19 @@ export const MapCanvas: React.FC = () => {
 
       el.innerHTML = `
         <div class="relative flex items-center justify-center w-9 h-9">
-          ${
-            (isFresh && displayPm25 !== null) || isWeatherLayer
-              ? `<span class="animate-ping absolute inline-flex h-8 w-8 rounded-full opacity-30" style="background-color: ${bgColor}"></span>`
-              : ''
-          }
+          ${(isFresh && displayPm25 !== null) || isWeatherLayer
+          ? `<span class="animate-ping absolute inline-flex h-8 w-8 rounded-full opacity-30" style="background-color: ${bgColor}"></span>`
+          : ''
+        }
           <div
-            class="relative z-10 flex items-center justify-center ${
-              isOffline ? 'w-7 h-7 text-[10px]' : 'min-w-[36px] h-8 px-1.5 text-[11px]'
-            } rounded-full font-extrabold transition-all duration-150 group-hover:scale-115 ${
-              isSelected ? 'scale-125 ring-2 ring-sky-300 z-30' : ''
-            }"
+            class="relative z-10 flex items-center justify-center ${isOffline ? 'w-7 h-7 text-[10px]' : 'min-w-[36px] h-8 px-1.5 text-[11px]'
+        } rounded-full font-extrabold transition-all duration-150 group-hover:scale-115 ${isSelected ? 'scale-125 ring-2 ring-sky-300 z-30' : ''
+        }"
             style="
               background-color: ${bgColor};
               color: ${textColor};
-              border: ${isOffline ? '1px' : '2px'} ${
-                isStaleOrDelayed ? 'dashed #F59E0B' : `solid ${borderColor}`
-              };
+              border: ${isOffline ? '1px' : '2px'} ${isStaleOrDelayed ? 'dashed #F59E0B' : `solid ${borderColor}`
+        };
               box-shadow: ${glowCss};
               opacity: ${isOffline ? '0.48' : '0.96'};
             "
@@ -889,9 +885,8 @@ export const MapCanvas: React.FC = () => {
           >
             ${badgeValueText}
           </div>
-          <span class="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-md bg-slate-950/92 border border-slate-700/80 text-[10px] font-semibold text-slate-100 whitespace-nowrap shadow-xl transition-opacity duration-150 ${
-            isSelected ? 'opacity-100 z-30' : 'opacity-0 group-hover:opacity-100 z-20'
-          }">
+          <span class="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-md bg-slate-950/92 border border-slate-700/80 text-[10px] font-semibold text-slate-100 whitespace-nowrap shadow-xl transition-opacity duration-150 ${isSelected ? 'opacity-100 z-30' : 'opacity-0 group-hover:opacity-100 z-20'
+        }">
             ${st.name}
           </span>
         </div>
