@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { classifyPm25Level } from '@hanoi-pm25/shared';
 import {
   HANOI_MAP_CENTER,
   VERIFIED_CAMS_MODEL_GRID_CELLS,
@@ -10,6 +9,100 @@ import {
 import { HANOI_ADMIN_BOUNDARIES_GEOJSON } from '../data/hanoiAdminBoundariesGeoJson.js';
 import { useWebGisStore } from '../store/useWebGisStore.js';
 import { WindParticleOverlay } from './WindParticleOverlay.js';
+
+/**
+ * Computes a continuous color & intensity style for PM2.5 (ug/m3) so that
+ * lower concentrations look lighter/softer and higher concentrations look deeper/more vivid.
+ */
+function getContinuousPm25Style(pm25: number): {
+  bgColor: string;
+  textColor: string;
+  glowColor: string;
+} {
+  const v = Math.max(0, pm25);
+  if (v <= 15) {
+    return {
+      bgColor: '#6EE7B7', // Light soft mint-emerald
+      textColor: '#064E3B',
+      glowColor: 'rgba(110, 231, 183, 0.45)',
+    };
+  }
+  if (v <= 25) {
+    return {
+      bgColor: '#34D399', // Fresh emerald
+      textColor: '#064E3B',
+      glowColor: 'rgba(52, 211, 153, 0.5)',
+    };
+  }
+  if (v <= 36) {
+    return {
+      bgColor: '#FDE047', // Light pale yellow (e.g. 33.6 ug/m3)
+      textColor: '#1E293B',
+      glowColor: 'rgba(253, 224, 71, 0.5)',
+    };
+  }
+  if (v <= 43) {
+    return {
+      bgColor: '#FACC15', // Warm golden yellow (e.g. 40.4 ug/m3)
+      textColor: '#0F172A',
+      glowColor: 'rgba(250, 204, 21, 0.55)',
+    };
+  }
+  if (v <= 50) {
+    return {
+      bgColor: '#F59E0B', // Deep amber-orange (e.g. 44.3 - 49.4 ug/m3)
+      textColor: '#0F172A',
+      glowColor: 'rgba(245, 158, 11, 0.65)',
+    };
+  }
+  if (v <= 80) {
+    return {
+      bgColor: '#F97316', // Vivid orange (50 - 80 ug/m3, exceeds QCVN)
+      textColor: '#FFFFFF',
+      glowColor: 'rgba(249, 115, 22, 0.72)',
+    };
+  }
+  if (v <= 150) {
+    return {
+      bgColor: '#EF4444', // Deep crimson red (80 - 150 ug/m3)
+      textColor: '#FFFFFF',
+      glowColor: 'rgba(239, 68, 68, 0.8)',
+    };
+  }
+  return {
+    bgColor: '#A855F7', // Purple (> 150 ug/m3)
+    textColor: '#FFFFFF',
+    glowColor: 'rgba(168, 85, 247, 0.85)',
+  };
+}
+
+// Outer polygon of Hanoi (from HANOI_ADMIN_BOUNDARIES_GEOJSON level 1) for point-in-polygon check
+const HANOI_OUTER_RING: Array<[number, number]> = [
+  [105.28, 21.08],
+  [105.36, 21.25],
+  [105.72, 21.38],
+  [105.91, 21.35],
+  [106.02, 21.05],
+  [105.94, 20.82],
+  [105.8, 20.56],
+  [105.62, 20.6],
+  [105.42, 20.82],
+  [105.28, 21.08],
+];
+
+function isPointInsidePolygon(lon: number, lat: number, ring: Array<[number, number]>): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0];
+    const yi = ring[i][1];
+    const xj = ring[j][0];
+    const yj = ring[j][1];
+    const intersect =
+      yi > lat !== yj > lat && lon < ((xj - xi) * (lat - yi)) / (yj - yi + 1e-12) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
 
 export const MapCanvas: React.FC = () => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -55,50 +148,99 @@ export const MapCanvas: React.FC = () => {
     });
   }, [stations, stationFilter, searchQuery]);
 
-  // Build dynamic GeoJSON for the ~40km CAMS Global model grid cells
-  const modelGridGeoJson = useMemo(() => {
-    return {
-      type: 'FeatureCollection' as const,
-      features: VERIFIED_CAMS_MODEL_GRID_CELLS.map((cell) => {
-        const [minLon, minLat, maxLon, maxLat] = cell.bounds;
-        const scaledPm25 = Number((cell.pm25UgM3 * timelineRatio).toFixed(1));
-        const classification = classifyPm25Level(scaledPm25);
+  /**
+   * Build a smooth continuous spatial gradient point field across Hanoi
+   * (instead of blocky rectangular polygons) so MapLibre's WebGL heatmap
+   * renders a smooth Windy.com-style color gradient where low values are light/translucent
+   * and higher values are warmer/more intense.
+   */
+  const gradientFieldGeoJson = useMemo(() => {
+    const features: Array<{
+      type: 'Feature';
+      properties: { weight: number; pm25UgM3: number };
+      geometry: { type: 'Point'; coordinates: [number, number] };
+    }> = [];
 
-        let fillColor = classification.colorHex;
-        if (activeLayer === 'temperature') {
-          fillColor = currentSlot.temperatureC >= 28 ? '#F97316' : '#38BDF8';
-        } else if (activeLayer === 'humidity') {
-          fillColor = currentSlot.humidityPct >= 75 ? '#3B82F6' : '#06B6D4';
-        } else if (activeLayer === 'wind') {
-          fillColor = '#22D3EE';
-        } else if (activeLayer === 'precipitation') {
-          fillColor = '#6366F1';
+    const activeStationsWithVal = stations.filter(
+      (s) => s.latestPm25UgM3 !== null && s.freshnessStatus !== 'UNAVAILABLE'
+    );
+
+    // Generate a dense smooth lattice of points inside Hanoi's boundary
+    for (let lat = 20.58; lat <= 21.37; lat += 0.048) {
+      for (let lon = 105.30; lon <= 106.01; lon += 0.048) {
+        if (!isPointInsidePolygon(lon, lat, HANOI_OUTER_RING)) {
+          continue;
         }
 
-        return {
-          type: 'Feature' as const,
+        // Inverse-distance blend of CAMS background cells + nearby real stations
+        let num = 0;
+        let den = 0;
+
+        for (const cell of VERIFIED_CAMS_MODEL_GRID_CELLS) {
+          const d2 =
+            (lat - cell.centerLat) * (lat - cell.centerLat) +
+            (lon - cell.centerLon) * (lon - cell.centerLon) +
+            0.008;
+          const w = 1 / d2;
+          num += cell.pm25UgM3 * timelineRatio * w;
+          den += w;
+        }
+
+        for (const st of activeStationsWithVal) {
+          const d2 =
+            (lat - st.latitude) * (lat - st.latitude) +
+            (lon - st.longitude) * (lon - st.longitude) +
+            0.0025;
+          const w = 1.8 / d2;
+          num += (st.latestPm25UgM3 ?? 38) * timelineRatio * w;
+          den += w;
+        }
+
+        const localPm25 = den > 0 ? num / den : 36 * timelineRatio;
+
+        // Normalize weight so lower values (15-30 ug/m3) produce a light, soft tint
+        // and higher values (45-75+ ug/m3) produce a vivid, intense gradient
+        const normalizedWeight = Math.max(
+          0.08,
+          Math.min(1.0, (localPm25 - 12) / 58)
+        );
+
+        features.push({
+          type: 'Feature',
           properties: {
-            cellCode: cell.cellCode,
-            labelVi: cell.labelVi,
-            pm25UgM3: scaledPm25,
-            fillColor,
+            weight: Number(normalizedWeight.toFixed(3)),
+            pm25UgM3: Number(localPm25.toFixed(1)),
           },
           geometry: {
-            type: 'Polygon' as const,
-            coordinates: [
-              [
-                [minLon, minLat],
-                [maxLon, minLat],
-                [maxLon, maxLat],
-                [minLon, maxLat],
-                [minLon, minLat],
-              ],
-            ],
+            type: 'Point',
+            coordinates: [Number(lon.toFixed(4)), Number(lat.toFixed(4))],
           },
-        };
-      }),
+        });
+      }
+    }
+
+    // Add real station hotspots directly so local peaks (e.g. Gia Lam / Giai Phong) glow accurately
+    for (const st of activeStationsWithVal) {
+      const stPm25 = (st.latestPm25UgM3 ?? 38) * timelineRatio;
+      const w = Math.max(0.12, Math.min(1.0, (stPm25 - 10) / 52));
+      features.push({
+        type: 'Feature',
+        properties: {
+          weight: Number(w.toFixed(3)),
+          pm25UgM3: Number(stPm25.toFixed(1)),
+        },
+        geometry: {
+          type: 'Point',
+          coordinates: [st.longitude, st.latitude],
+        },
+      });
+    }
+
+    return {
+      type: 'FeatureCollection' as const,
+      features,
     };
-  }, [activeLayer, timelineRatio, currentSlot]);
+  }, [stations, timelineRatio]);
 
   // Initialize MapLibre GL JS Map
   useEffect(() => {
@@ -124,38 +266,91 @@ export const MapCanvas: React.FC = () => {
     );
 
     map.on('load', () => {
-      // 1. CAMS Global ~40km Model Grid Source & Layers
-      map.addSource('cams-model-grid', {
+      // 1. Continuous Smooth Gradient Surface (Replaces blocky rectangular CAMS boxes)
+      map.addSource('cams-gradient-field', {
         type: 'geojson',
-        data: modelGridGeoJson,
+        data: gradientFieldGeoJson,
       });
 
       map.addLayer({
-        id: 'cams-model-grid-fill',
-        type: 'fill',
-        source: 'cams-model-grid',
+        id: 'pollution-gradient-surface',
+        type: 'heatmap',
+        source: 'cams-gradient-field',
+        maxzoom: 16,
         paint: {
-          'fill-color': ['get', 'fillColor'],
-          'fill-opacity': modelGridOpacity,
+          'heatmap-weight': ['get', 'weight'],
+          'heatmap-intensity': [
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            7,
+            0.55,
+            9,
+            0.78,
+            11,
+            1.05,
+            14,
+            1.25,
+          ],
+          'heatmap-radius': [
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            7,
+            26,
+            8.5,
+            44,
+            10,
+            68,
+            11.5,
+            110,
+            13,
+            160,
+            15,
+            220,
+          ],
+          // Smooth multi-stop color ramp: low density = very soft light mint/yellow, high = vivid orange/red/purple
+          'heatmap-color': [
+            'interpolate',
+            ['linear'],
+            ['heatmap-density'],
+            0,
+            'rgba(16, 185, 129, 0)',
+            0.12,
+            'rgba(110, 231, 183, 0.16)', // Very light soft mint (Low index)
+            0.28,
+            'rgba(52, 211, 153, 0.30)',  // Soft emerald-green
+            0.45,
+            'rgba(253, 224, 71, 0.44)',  // Light lemon yellow (Moderate-low ~30-35 ug/m3)
+            0.62,
+            'rgba(250, 204, 21, 0.58)',  // Warm golden yellow (~38-44 ug/m3)
+            0.78,
+            'rgba(249, 115, 22, 0.72)',  // Vivid orange (~48-65 ug/m3, e.g. Gia Lam / Giai Phong)
+            0.92,
+            'rgba(239, 68, 68, 0.84)',   // Deep crimson red (Unhealthy)
+            1.0,
+            'rgba(168, 85, 247, 0.90)',  // Purple (Very unhealthy)
+          ],
+          'heatmap-opacity': Math.min(0.88, Math.max(0.15, modelGridOpacity * 1.45)),
         },
       });
 
-      map.addLayer({
-        id: 'cams-model-grid-outline',
-        type: 'line',
-        source: 'cams-model-grid',
-        paint: {
-          'line-color': '#94A3B8',
-          'line-width': 1,
-          'line-dasharray': [4, 4],
-          'line-opacity': 0.55,
-        },
-      });
-
-      // 2. Hanoi Administrative Boundaries Source & Layers
+      // 2. Hanoi Administrative Boundaries Source & Subtle Glow Layers
       map.addSource('hanoi-admin-boundaries', {
         type: 'geojson',
         data: HANOI_ADMIN_BOUNDARIES_GEOJSON,
+      });
+
+      map.addLayer({
+        id: 'hanoi-admin-glow',
+        type: 'line',
+        source: 'hanoi-admin-boundaries',
+        paint: {
+          'line-color': '#38BDF8',
+          'line-width': ['case', ['==', ['get', 'adminLevel'], 1], 5, 1.5],
+          'line-blur': 3,
+          'line-opacity': ['case', ['==', ['get', 'adminLevel'], 1], 0.35, 0.12],
+        },
       });
 
       map.addLayer({
@@ -167,15 +362,16 @@ export const MapCanvas: React.FC = () => {
             'case',
             ['==', ['get', 'adminLevel'], 1],
             '#38BDF8',
-            '#CBD5E1',
+            '#94A3B8',
           ],
           'line-width': [
             'case',
             ['==', ['get', 'adminLevel'], 1],
-            2.5,
-            1.1,
+            1.8,
+            0.8,
           ],
-          'line-opacity': 0.8,
+          'line-dasharray': [2, 2],
+          'line-opacity': 0.65,
         },
       });
 
@@ -217,46 +413,43 @@ export const MapCanvas: React.FC = () => {
     };
   }, []);
 
-  // Update Model Grid GeoJSON & Opacity when layer/timeline changes
+  // Update Continuous Gradient Field & Opacity when layer/timeline changes
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
 
-    const src = map.getSource('cams-model-grid') as maplibregl.GeoJSONSource | undefined;
+    const src = map.getSource('cams-gradient-field') as maplibregl.GeoJSONSource | undefined;
     if (src) {
-      src.setData(modelGridGeoJson);
+      src.setData(gradientFieldGeoJson);
     }
-    if (map.getLayer('cams-model-grid-fill')) {
+    if (map.getLayer('pollution-gradient-surface')) {
       map.setLayoutProperty(
-        'cams-model-grid-fill',
+        'pollution-gradient-surface',
         'visibility',
         showModelGrid ? 'visible' : 'none'
       );
-      map.setPaintProperty('cams-model-grid-fill', 'fill-opacity', modelGridOpacity);
-    }
-    if (map.getLayer('cams-model-grid-outline')) {
-      map.setLayoutProperty(
-        'cams-model-grid-outline',
-        'visibility',
-        showModelGrid ? 'visible' : 'none'
+      map.setPaintProperty(
+        'pollution-gradient-surface',
+        'heatmap-opacity',
+        Math.min(0.92, Math.max(0.15, modelGridOpacity * 1.45))
       );
     }
-  }, [modelGridGeoJson, showModelGrid, modelGridOpacity]);
+  }, [gradientFieldGeoJson, showModelGrid, modelGridOpacity]);
 
   // Update Administrative Boundaries visibility
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
+    const vis = showAdminBoundaries ? 'visible' : 'none';
     if (map.getLayer('hanoi-admin-line')) {
-      map.setLayoutProperty(
-        'hanoi-admin-line',
-        'visibility',
-        showAdminBoundaries ? 'visible' : 'none'
-      );
+      map.setLayoutProperty('hanoi-admin-line', 'visibility', vis);
+    }
+    if (map.getLayer('hanoi-admin-glow')) {
+      map.setLayoutProperty('hanoi-admin-glow', 'visibility', vis);
     }
   }, [showAdminBoundaries]);
 
-  // Render Station Markers
+  // Render Station Markers with Continuous Color Intensity & Hover/Selected Labels
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -281,13 +474,18 @@ export const MapCanvas: React.FC = () => {
         : null;
 
       let badgeValueText = 'N/A';
-      let bgColor = '#334155';
-      let borderColor = '#64748B';
+      let bgColor = 'rgba(30, 41, 59, 0.72)';
+      let textColor = '#94A3B8';
+      let borderColor = 'rgba(100, 116, 139, 0.55)';
+      let glowCss = 'none';
 
       if (displayPm25 !== null) {
-        const cls = classifyPm25Level(displayPm25);
-        bgColor = cls.colorHex;
-        borderColor = isSelected ? '#FFFFFF' : '#0F172A';
+        const contStyle = getContinuousPm25Style(displayPm25);
+        bgColor = contStyle.bgColor;
+        textColor = contStyle.textColor;
+        borderColor = isSelected ? '#FFFFFF' : 'rgba(15, 23, 42, 0.85)';
+        glowCss = `0 0 16px ${contStyle.glowColor}`;
+
         if (activeLayer === 'pm25') {
           badgeValueText = `${displayPm25}`;
         } else if (activeLayer === 'pm10') {
@@ -302,30 +500,38 @@ export const MapCanvas: React.FC = () => {
       const isFresh = st.freshnessStatus === 'FRESH';
       const isStaleOrDelayed =
         st.freshnessStatus === 'STALE' || st.freshnessStatus === 'DELAYED';
+      const isOffline = st.freshnessStatus === 'UNAVAILABLE';
 
       el.innerHTML = `
         <div class="relative flex items-center justify-center w-9 h-9">
           ${
             isFresh && displayPm25 !== null
-              ? `<span class="animate-ping absolute inline-flex h-9 w-9 rounded-full opacity-35" style="background-color: ${bgColor}"></span>`
+              ? `<span class="animate-ping absolute inline-flex h-8 w-8 rounded-full opacity-30" style="background-color: ${bgColor}"></span>`
               : ''
           }
           <div
-            class="relative z-10 flex items-center justify-center min-w-[36px] h-9 px-2 rounded-full font-bold text-xs shadow-lg transition-transform duration-150 group-hover:scale-110 ${
-              isSelected ? 'scale-125 ring-2 ring-sky-400' : ''
+            class="relative z-10 flex items-center justify-center ${
+              isOffline ? 'w-7 h-7 text-[10px]' : 'min-w-[34px] h-8 px-1.5 text-[11px]'
+            } rounded-full font-extrabold transition-all duration-150 group-hover:scale-115 ${
+              isSelected ? 'scale-125 ring-2 ring-sky-300 z-30' : ''
             }"
             style="
               background-color: ${bgColor};
-              color: ${displayPm25 !== null && displayPm25 <= 50 ? '#0F172A' : '#FFFFFF'};
-              border: 2px ${isStaleOrDelayed ? 'dashed #F59E0B' : `solid ${borderColor}`};
-              opacity: ${st.freshnessStatus === 'UNAVAILABLE' ? '0.68' : '0.96'};
+              color: ${textColor};
+              border: ${isOffline ? '1px' : '2px'} ${
+                isStaleOrDelayed ? 'dashed #F59E0B' : `solid ${borderColor}`
+              };
+              box-shadow: ${glowCss};
+              opacity: ${isOffline ? '0.48' : '0.96'};
             "
             title="${st.name} (${st.freshnessStatus})"
           >
             ${badgeValueText}
           </div>
-          <span class="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded bg-slate-950/90 border border-slate-700/70 text-[10px] font-medium text-slate-200 whitespace-nowrap shadow">
-            ${st.name.length > 18 ? st.name.slice(0, 18) + '…' : st.name}
+          <span class="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-md bg-slate-950/92 border border-slate-700/80 text-[10px] font-semibold text-slate-100 whitespace-nowrap shadow-xl transition-opacity duration-150 ${
+            isSelected ? 'opacity-100 z-30' : 'opacity-0 group-hover:opacity-100 z-20'
+          }">
+            ${st.name}
           </span>
         </div>
       `;
@@ -346,7 +552,15 @@ export const MapCanvas: React.FC = () => {
 
       markersRef.current.push(marker);
     }
-  }, [filteredStations, showStations, selectedStation, activeLayer, currentSlot, timelineRatio, selectStation]);
+  }, [
+    filteredStations,
+    showStations,
+    selectedStation,
+    activeLayer,
+    currentSlot,
+    timelineRatio,
+    selectStation,
+  ]);
 
   // Render Arbitrary Point Inspection Marker & Dashed Line to Nearest Active Station
   useEffect(() => {
@@ -410,4 +624,3 @@ export const MapCanvas: React.FC = () => {
     </div>
   );
 };
-

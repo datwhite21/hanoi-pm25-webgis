@@ -161,8 +161,8 @@ export const LayerSidebar: React.FC = () => {
 
           <label className="flex items-center justify-between cursor-pointer text-slate-200 hover:text-white">
             <span className="flex flex-col">
-              <span>Lưới mô hình CAMS</span>
-              <span className="text-[10px] text-slate-400">Độ phân giải ~40 km</span>
+              <span>Dải màu nồng độ (CAMS)</span>
+              <span className="text-[10px] text-slate-400">Thấp màu nhạt · Cao màu đậm</span>
             </span>
             <input
               type="checkbox"
