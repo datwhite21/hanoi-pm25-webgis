@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -6,26 +6,136 @@ import {
   Play,
   Radio,
 } from 'lucide-react';
+import type { ActiveMapLayer } from '@hanoi-pm25/shared';
 import { VERIFIED_TIMELINE_SLOTS } from '../data/verifiedHanoiSnapshot.js';
 import { useWebGisStore } from '../store/useWebGisStore.js';
 
-const LEGEND_STEPS = [
-  { label: '0–25 (Tốt)', color: '#10B981' },
-  { label: '25–50 (TB · QCVN)', color: '#FACC15' },
-  { label: '50–80 (Kém)', color: '#F97316' },
-  { label: '80–150 (Xấu)', color: '#EF4444' },
-  { label: '150–250 (Rất xấu)', color: '#A855F7' },
-  { label: '>250 (Nguy hại)', color: '#881337' },
-];
+const LEGEND_BY_LAYER: Record<
+  ActiveMapLayer,
+  {
+    title: string;
+    unit: string;
+    steps: Array<{ label: string; color: string }>;
+  }
+> = {
+  pm25: {
+    title: 'PM2.5',
+    unit: '(µg/m³)',
+    steps: [
+      { label: '0–18 (Rất tốt)', color: '#6EE7B7' },
+      { label: '18–36 (Tốt/Nhẹ)', color: '#FDE047' },
+      { label: '36–50 (TB · QCVN)', color: '#F59E0B' },
+      { label: '50–80 (Kém)', color: '#F97316' },
+      { label: '80–150 (Xấu)', color: '#EF4444' },
+      { label: '>150 (Rất xấu)', color: '#A855F7' },
+    ],
+  },
+  pm10: {
+    title: 'PM10',
+    unit: '(µg/m³)',
+    steps: [
+      { label: '0–35 (Thấp)', color: '#6EE7B7' },
+      { label: '35–46 (Vừa)', color: '#BEF264' },
+      { label: '46–54 (TB)', color: '#FACC15' },
+      { label: '54–68 (Cao)', color: '#F59E0B' },
+      { label: '68–100 (Kém)', color: '#EA580C' },
+      { label: '>100 (Xấu)', color: '#DC2626' },
+    ],
+  },
+  aqi: {
+    title: 'VN_AQI',
+    unit: '(QĐ 1459)',
+    steps: [
+      { label: '0–50 (Tốt)', color: '#34D399' },
+      { label: '51–78 (TB thấp)', color: '#FDE047' },
+      { label: '79–100 (TB cao)', color: '#F59E0B' },
+      { label: '101–150 (Kém)', color: '#F97316' },
+      { label: '151–200 (Xấu)', color: '#EF4444' },
+      { label: '>200 (Rất xấu)', color: '#A855F7' },
+    ],
+  },
+  wind: {
+    title: 'Gió 10m',
+    unit: '(km/h)',
+    steps: [
+      { label: '<6.5 (Lặng gió)', color: '#7DD3FC' },
+      { label: '6.5–9 (Gió nhẹ)', color: '#22D3EE' },
+      { label: '9–11.5 (Gió vừa)', color: '#34D399' },
+      { label: '11.5–15 (Khá mạnh)', color: '#FACC15' },
+      { label: '>15 (Khuếch tán mạnh)', color: '#F97316' },
+    ],
+  },
+  temperature: {
+    title: 'Nhiệt độ',
+    unit: '(°C · 2m)',
+    steps: [
+      { label: '<24.5° (Mát)', color: '#38BDF8' },
+      { label: '24.5–26.5° (Dễ chịu)', color: '#34D399' },
+      { label: '26.5–27.6° (Ấm)', color: '#FDE047' },
+      { label: '27.6–28.4° (Đảo nhiệt)', color: '#FB923C' },
+      { label: '>28.4° (Nóng nội đô)', color: '#F43F5E' },
+    ],
+  },
+  humidity: {
+    title: 'Độ ẩm',
+    unit: '(% RH)',
+    steps: [
+      { label: '<65% (Khô ráo)', color: '#67E8F9' },
+      { label: '65–72% (Ẩm vừa)', color: '#38BDF8' },
+      { label: '72–78% (Ẩm cao)', color: '#3B82F6' },
+      { label: '>78% (Mù ẩm/Trương nở)', color: '#6366F1' },
+    ],
+  },
+  precipitation: {
+    title: 'Lượng mưa',
+    unit: '(mm/h)',
+    steps: [
+      { label: '0–0.4 (Không mưa)', color: '#7DD3FC' },
+      { label: '0.4–1.2 (Mưa nhỏ)', color: '#38BDF8' },
+      { label: '1.2–2.2 (Rửa trôi bụi)', color: '#2563EB' },
+      { label: '>2.2 (Mưa rào mạnh)', color: '#7C3AED' },
+    ],
+  },
+};
+
+function formatLiveTimeVi(now: Date): { dayStr: string; timeStr: string } {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(now);
+  const map: Record<string, string> = {};
+  for (const p of parts) {
+    map[p.type] = p.value;
+  }
+  return {
+    dayStr: `Hôm nay ${map.day}/${map.month}`,
+    timeStr: `${map.hour}:${map.minute}:${map.second} (HIỆN TẠI)`,
+  };
+}
 
 export const TimelineBar: React.FC = () => {
   const {
+    activeLayer,
     timelineIndex,
     isPlayingTimeline,
     setTimelineIndex,
     stepTimeline,
     togglePlayTimeline,
   } = useWebGisStore();
+
+  const [liveClock, setLiveClock] = useState(() => formatLiveTimeVi(new Date()));
+
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      setLiveClock(formatLiveTimeVi(new Date()));
+    }, 1000);
+    return () => window.clearInterval(t);
+  }, []);
 
   useEffect(() => {
     if (!isPlayingTimeline) return;
@@ -36,6 +146,7 @@ export const TimelineBar: React.FC = () => {
   }, [isPlayingTimeline, stepTimeline]);
 
   const currentSlot = VERIFIED_TIMELINE_SLOTS[timelineIndex] ?? VERIFIED_TIMELINE_SLOTS[6];
+  const legendConfig = LEGEND_BY_LAYER[activeLayer] ?? LEGEND_BY_LAYER.pm25;
 
   return (
     <footer className="relative z-20 w-full shrink-0 pl-11 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2 pointer-events-none">
@@ -86,11 +197,29 @@ export const TimelineBar: React.FC = () => {
         <div className="flex-1 flex flex-col gap-1 min-w-0">
           <div className="flex items-center justify-between text-[11px]">
             <span className="font-bold text-white truncate">
-              {currentSlot.dayLabelVi} —{' '}
-              <span className="text-emerald-300">{currentSlot.hourLabel}</span>
+              {currentSlot.isLive ? liveClock.dayStr : currentSlot.dayLabelVi} —{' '}
+              <span className="text-emerald-300">
+                {currentSlot.isLive ? liveClock.timeStr : currentSlot.hourLabel}
+              </span>
             </span>
             <span className="text-[10px] text-slate-400 hidden sm:inline">
-              {currentSlot.isForecast ? (
+              {activeLayer === 'wind' ? (
+                <span>
+                  Tốc độ gió 10m TB: <strong className="text-sky-300">{currentSlot.windSpeedKmh} km/h</strong> (Hướng {currentSlot.windDirectionDeg}°)
+                </span>
+              ) : activeLayer === 'temperature' ? (
+                <span>
+                  Nhiệt độ 2m TB: <strong className="text-rose-300">{currentSlot.temperatureC}°C</strong> (Đảo nhiệt nội đô +1.5°C)
+                </span>
+              ) : activeLayer === 'humidity' ? (
+                <span>
+                  Độ ẩm tương đối TB: <strong className="text-blue-300">{currentSlot.humidityPct}% RH</strong>
+                </span>
+              ) : activeLayer === 'precipitation' ? (
+                <span>
+                  Lượng mưa TB: <strong className="text-indigo-300">{currentSlot.precipitationMm} mm/h</strong>
+                </span>
+              ) : currentSlot.isForecast ? (
                 <span className="text-amber-300 font-semibold">
                   Dự báo mô hình CAMS: ~{currentSlot.cityMeanModelPm25} µg/m³
                 </span>
@@ -128,14 +257,14 @@ export const TimelineBar: React.FC = () => {
         </div>
       </div>
 
-      {/* PM2.5 Concentration Color Legend */}
+      {/* Dynamic Active Layer Color Legend */}
       <div className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-900/92 border border-slate-700/80 backdrop-blur-md shadow-2xl pointer-events-auto shrink-0">
-        <div className="text-[10px] font-bold text-slate-300 leading-tight pr-1 border-r border-slate-800">
-          <div>PM2.5</div>
-          <div className="text-slate-400 font-normal">(µg/m³)</div>
+        <div className="text-[10px] font-bold text-slate-300 leading-tight pr-1.5 border-r border-slate-800">
+          <div>{legendConfig.title}</div>
+          <div className="text-slate-400 font-normal">{legendConfig.unit}</div>
         </div>
         <div className="flex items-center gap-1">
-          {LEGEND_STEPS.map((st) => (
+          {legendConfig.steps.map((st) => (
             <div key={st.label} className="flex flex-col items-center">
               <span
                 className="w-10 sm:w-14 h-2.5 rounded-sm"
@@ -151,4 +280,3 @@ export const TimelineBar: React.FC = () => {
     </footer>
   );
 };
-

@@ -36,7 +36,7 @@ import {
   type LiveAreaSpatialStats,
 } from '../services/apiClient.js';
 
-export type StationFilterMode = 'ALL' | DataFreshnessStatus;
+export type StationFilterMode = 'ALL' | 'ACTIVE_ONLY' | DataFreshnessStatus;
 export type DrawerTab =
   | 'timeseries'
   | 'meteorology'

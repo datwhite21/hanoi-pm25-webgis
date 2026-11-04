@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Activity,
   AlertTriangle,
   BarChart3,
   Clock,
   Database,
+  Eye,
+  EyeOff,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -13,6 +15,24 @@ import {
 } from 'lucide-react';
 import { VERIFIED_TIMELINE_SLOTS } from '../data/verifiedHanoiSnapshot.js';
 import { useWebGisStore, type UserRole } from '../store/useWebGisStore.js';
+
+function formatVietnamNow(now: Date): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(now);
+  const map: Record<string, string> = {};
+  for (const p of parts) {
+    map[p.type] = p.value;
+  }
+  return `${map.hour}:${map.minute}:${map.second} (${map.day}/${map.month})`;
+}
 
 export const FloatingHeader: React.FC = () => {
   const {
@@ -28,6 +48,8 @@ export const FloatingHeader: React.FC = () => {
     selectStation,
     inspectMapCoordinate,
     timelineIndex,
+    showStations,
+    toggleStations,
     openDrawer,
     userRole,
     setUserRole,
@@ -40,17 +62,77 @@ export const FloatingHeader: React.FC = () => {
     Array<{ id: number; name: string; latitude: number; longitude: number; admin1?: string }>
   >([]);
 
+  // Real-time ticking Vietnam clock (Asia/Ho_Chi_Minh)
+  const [liveClockText, setLiveClockText] = useState<string>(() =>
+    formatVietnamNow(new Date())
+  );
+
+  // Live Open-Meteo Hanoi weather state
+  const [liveWeather, setLiveWeather] = useState<{
+    windSpeedKmh: number;
+    temperatureC: number;
+    humidityPct: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setLiveClockText(formatVietnamNow(new Date()));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchLiveHanoiWeather = async () => {
+      try {
+        const res = await fetch(
+          'https://api.open-meteo.com/v1/forecast?latitude=21.0285&longitude=105.8542&current=temperature_2m,relative_humidity_2m,wind_speed_10m&timezone=Asia%2FHo_Chi_Minh'
+        );
+        if (!res.ok) return;
+        const json = await res.json();
+        if (mounted && json?.current) {
+          setLiveWeather({
+            windSpeedKmh: Number(
+              (json.current.wind_speed_10m ?? 9.9).toFixed(1)
+            ),
+            temperatureC: Number(
+              (json.current.temperature_2m ?? 27.5).toFixed(1)
+            ),
+            humidityPct: Math.round(json.current.relative_humidity_2m ?? 70),
+          });
+        }
+      } catch {
+        // Keep verified snapshot weather on offline fallback
+      }
+    };
+    void fetchLiveHanoiWeather();
+    const wxTimer = window.setInterval(fetchLiveHanoiWeather, 5 * 60 * 1000);
+    return () => {
+      mounted = false;
+      window.clearInterval(wxTimer);
+    };
+  }, []);
+
   const currentSlot = VERIFIED_TIMELINE_SLOTS[timelineIndex] ?? VERIFIED_TIMELINE_SLOTS[6];
   const healthySourcesCount = dataSources.filter((s) => s.status === 'HEALTHY').length;
   const activeAlertsCount = alerts.filter((a) => a.status === 'ACTIVE').length;
 
+  const displayWindKmh =
+    currentSlot.isLive && liveWeather ? liveWeather.windSpeedKmh : currentSlot.windSpeedKmh;
+  const displayTempC =
+    currentSlot.isLive && liveWeather ? liveWeather.temperatureC : currentSlot.temperatureC;
+  const displayHumidityPct =
+    currentSlot.isLive && liveWeather ? liveWeather.humidityPct : currentSlot.humidityPct;
+
   const matchingStations = searchQuery.trim()
-    ? stations.filter(
-        (s) =>
-          s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          s.districtNameVi.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          s.administrativeAreaNameVi.toLowerCase().includes(searchQuery.toLowerCase())
-      ).slice(0, 6)
+    ? stations
+        .filter(
+          (s) =>
+            s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            s.districtNameVi.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            s.administrativeAreaNameVi.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+        .slice(0, 6)
     : [];
 
   const handleSearchChange = async (value: string) => {
@@ -98,7 +180,7 @@ export const FloatingHeader: React.FC = () => {
         </div>
 
         {/* Search Input with Station + Open-Meteo Geocoding Dropdown */}
-        <div className="relative w-44 sm:w-56 lg:w-64">
+        <div className="relative w-44 sm:w-52 lg:w-60">
           <div className="flex items-center gap-1.5 px-2.5 py-2 rounded-2xl bg-slate-900/92 border border-slate-700/75 backdrop-blur-md shadow-xl">
             <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             <input
@@ -181,23 +263,49 @@ export const FloatingHeader: React.FC = () => {
 
       {/* Right Status Pills + Action Buttons */}
       <div className="flex flex-wrap items-center gap-1.5 pointer-events-auto">
-        {/* Measurement Timestamp & Weather Quick Summary */}
-        <div className="hidden 2xl:flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-slate-900/92 border border-slate-700/75 backdrop-blur-md text-[11px] shadow-xl whitespace-nowrap">
+        {/* Exact Live Vietnam Clock & Real-Time Weather Quick Summary */}
+        <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-slate-900/92 border border-slate-700/75 backdrop-blur-md text-[11px] shadow-xl whitespace-nowrap">
           <div className="flex items-center gap-1 text-slate-200">
             <Clock className="w-3.5 h-3.5 text-emerald-400" />
             <span>
-              <strong>{currentSlot.hourLabel}</strong>
+              <strong>
+                {currentSlot.isLive
+                  ? `${liveClockText} · HIỆN TẠI`
+                  : `${currentSlot.dayLabelVi} ${currentSlot.hourLabel}`}
+              </strong>
             </span>
           </div>
           <span className="text-slate-700">|</span>
           <div className="flex items-center gap-1 text-slate-300">
             <Wind className="w-3.5 h-3.5 text-sky-400" />
             <span>
-              Gió <strong>{currentSlot.windSpeedKmh} km/h</strong> · {currentSlot.temperatureC}°C ·{' '}
-              {currentSlot.humidityPct}% RH
+              Gió <strong>{displayWindKmh} km/h</strong> · {displayTempC}°C · {displayHumidityPct}% RH
             </span>
           </div>
         </div>
+
+        {/* 1-Click Show / Hide Stations Button */}
+        <button
+          type="button"
+          onClick={toggleStations}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl border backdrop-blur-md text-xs font-semibold shadow-xl transition whitespace-nowrap ${
+            showStations
+              ? 'bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-500/50 text-emerald-200'
+              : 'bg-slate-900/92 hover:bg-slate-800 border-slate-700/75 text-slate-300'
+          }`}
+          title={
+            showStations
+              ? 'Nhấn để ẩn toàn bộ các trạm quan trắc trên bản đồ (chỉ xem dải màu nền)'
+              : 'Nhấn để hiển thị lại các trạm quan trắc trên bản đồ'
+          }
+        >
+          {showStations ? (
+            <Eye className="w-3.5 h-3.5 text-emerald-400" />
+          ) : (
+            <EyeOff className="w-3.5 h-3.5 text-slate-400" />
+          )}
+          <span>{showStations ? 'Ẩn trạm' : 'Hiện trạm'}</span>
+        </button>
 
         {/* Live Supabase PostGIS Sync Button */}
         <button
@@ -231,7 +339,7 @@ export const FloatingHeader: React.FC = () => {
           title="Xem trạng thái kết nối các nguồn dữ liệu thực tế"
         >
           <Database className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="hidden lg:inline">Nguồn:</span>
+          <span className="hidden xl:inline">Nguồn:</span>
           <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold text-[11px]">
             {healthySourcesCount}/{dataSources.length} OK
           </span>
@@ -306,4 +414,3 @@ export const FloatingHeader: React.FC = () => {
     </header>
   );
 };
-

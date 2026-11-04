@@ -533,21 +533,94 @@ export interface TimelineSlot {
   windDirectionDeg: number;
   temperatureC: number;
   humidityPct: number;
+  precipitationMm?: number;
 }
 
-export const VERIFIED_TIMELINE_SLOTS: TimelineSlot[] = [
-  { index: 0, isoLocal: '2026-10-27T08:00', dayLabelVi: 'Hôm qua 27/10', hourLabel: '08:00', isLive: false, isForecast: false, cityMeanObservedPm25: 44.2, cityMeanModelPm25: 43.5, windSpeedKmh: 6.4, windDirectionDeg: 135, temperatureC: 24.5, humidityPct: 79 },
-  { index: 1, isoLocal: '2026-10-27T14:00', dayLabelVi: 'Hôm qua 27/10', hourLabel: '14:00', isLive: false, isForecast: false, cityMeanObservedPm25: 36.8, cityMeanModelPm25: 37.2, windSpeedKmh: 11.2, windDirectionDeg: 142, temperatureC: 28.9, humidityPct: 64 },
-  { index: 2, isoLocal: '2026-10-27T20:00', dayLabelVi: 'Hôm qua 27/10', hourLabel: '20:00', isLive: false, isForecast: false, cityMeanObservedPm25: 48.5, cityMeanModelPm25: 46.8, windSpeedKmh: 5.8, windDirectionDeg: 150, temperatureC: 25.4, humidityPct: 78 },
-  { index: 3, isoLocal: '2026-10-28T02:00', dayLabelVi: 'Hôm nay 28/10', hourLabel: '02:00', isLive: false, isForecast: false, cityMeanObservedPm25: 38.9, cityMeanModelPm25: 41.0, windSpeedKmh: 4.5, windDirectionDeg: 145, temperatureC: 22.4, humidityPct: 86 },
-  { index: 4, isoLocal: '2026-10-28T08:00', dayLabelVi: 'Hôm nay 28/10', hourLabel: '08:00', isLive: false, isForecast: false, cityMeanObservedPm25: 45.2, cityMeanModelPm25: 44.1, windSpeedKmh: 7.1, windDirectionDeg: 144, temperatureC: 24.8, humidityPct: 78 },
-  { index: 5, isoLocal: '2026-10-28T12:00', dayLabelVi: 'Hôm nay 28/10', hourLabel: '12:00', isLive: false, isForecast: false, cityMeanObservedPm25: 40.9, cityMeanModelPm25: 39.8, windSpeedKmh: 11.0, windDirectionDeg: 146, temperatureC: 28.5, humidityPct: 66 },
-  { index: 6, isoLocal: '2026-10-28T17:35', dayLabelVi: 'Hôm nay 28/10', hourLabel: '17:35 (HIỆN TẠI)', isLive: true, isForecast: false, cityMeanObservedPm25: 40.66, cityMeanModelPm25: 42.7, windSpeedKmh: 9.9, windDirectionDeg: 148, temperatureC: 27.5, humidityPct: 70 },
-  { index: 7, isoLocal: '2026-10-28T22:00', dayLabelVi: 'Tối nay 28/10', hourLabel: '22:00 (Dự báo)', isLive: false, isForecast: true, cityMeanObservedPm25: null, cityMeanModelPm25: 52.4, windSpeedKmh: 6.2, windDirectionDeg: 155, temperatureC: 24.9, humidityPct: 79 },
-  { index: 8, isoLocal: '2026-10-29T08:00', dayLabelVi: 'Ngày mai 29/10', hourLabel: '08:00 (Dự báo)', isLive: false, isForecast: true, cityMeanObservedPm25: null, cityMeanModelPm25: 56.8, windSpeedKmh: 5.4, windDirectionDeg: 160, temperatureC: 24.2, humidityPct: 82 },
-  { index: 9, isoLocal: '2026-10-29T14:00', dayLabelVi: 'Ngày mai 29/10', hourLabel: '14:00 (Dự báo)', isLive: false, isForecast: true, cityMeanObservedPm25: null, cityMeanModelPm25: 44.5, windSpeedKmh: 10.8, windDirectionDeg: 138, temperatureC: 28.4, humidityPct: 67 },
-  { index: 10, isoLocal: '2026-10-30T08:00', dayLabelVi: '30/10 (Dự báo)', hourLabel: '08:00 (Dự báo)', isLive: false, isForecast: true, cityMeanObservedPm25: null, cityMeanModelPm25: 61.2, windSpeedKmh: 4.8, windDirectionDeg: 120, temperatureC: 23.8, humidityPct: 84 },
-];
+function formatVnDateHour(baseMs: number, offsetHours: number): {
+  isoLocal: string;
+  dayLabelVi: string;
+  hhmm: string;
+} {
+  const target = new Date(baseMs + offsetHours * 3600_000);
+  const parts = new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(target);
+
+  const getPart = (type: string) => parts.find((p) => p.type === type)?.value ?? '00';
+  const day = getPart('day');
+  const month = getPart('month');
+  const year = getPart('year');
+  const hour = getPart('hour');
+  const minute = offsetHours === 0 ? getPart('minute') : '00';
+
+  const dayPrefix =
+    offsetHours === 0
+      ? 'Hôm nay'
+      : offsetHours < -12
+        ? 'Hôm qua'
+        : offsetHours < 0
+          ? 'Cách đây ' + Math.abs(offsetHours) + 'h ·'
+          : offsetHours <= 12
+            ? 'Dự báo +' + offsetHours + 'h ·'
+            : 'Ngày mai';
+
+  return {
+    isoLocal: `${year}-${month}-${day}T${hour}:${minute}`,
+    dayLabelVi: `${dayPrefix} ${day}/${month}`.trim(),
+    hhmm: `${hour}:${minute}`,
+  };
+}
+
+export function buildDynamicTimelineSlots(nowMs: number = Date.now()): TimelineSlot[] {
+  const offsets = [-24, -18, -12, -6, -3, -1, 0, 3, 6, 12, 24];
+  const basePresets = [
+    { obs: 44.2, mod: 43.5, wind: 6.4, dir: 135, temp: 24.5, hum: 79, rain: 0.0 },
+    { obs: 36.8, mod: 37.2, wind: 11.2, dir: 142, temp: 28.9, hum: 64, rain: 0.0 },
+    { obs: 48.5, mod: 46.8, wind: 5.8, dir: 150, temp: 25.4, hum: 78, rain: 0.2 },
+    { obs: 38.9, mod: 41.0, wind: 4.5, dir: 145, temp: 22.4, hum: 86, rain: 0.4 },
+    { obs: 45.2, mod: 44.1, wind: 7.1, dir: 144, temp: 24.8, hum: 78, rain: 0.0 },
+    { obs: 40.9, mod: 39.8, wind: 11.0, dir: 146, temp: 28.5, hum: 66, rain: 0.0 },
+    { obs: 40.66, mod: 42.7, wind: 9.9, dir: 148, temp: 27.5, hum: 70, rain: 0.0 },
+    { obs: null, mod: 52.4, wind: 6.2, dir: 155, temp: 24.9, hum: 79, rain: 0.0 },
+    { obs: null, mod: 56.8, wind: 5.4, dir: 160, temp: 24.2, hum: 82, rain: 0.3 },
+    { obs: null, mod: 44.5, wind: 10.8, dir: 138, temp: 28.4, hum: 67, rain: 0.8 },
+    { obs: null, mod: 61.2, wind: 4.8, dir: 120, temp: 23.8, hum: 84, rain: 0.0 },
+  ];
+
+  return offsets.map((offsetH, idx) => {
+    const p = basePresets[idx];
+    const fmt = formatVnDateHour(nowMs, offsetH);
+    const isLive = offsetH === 0;
+    const isForecast = offsetH > 0;
+    return {
+      index: idx,
+      isoLocal: fmt.isoLocal,
+      dayLabelVi: fmt.dayLabelVi,
+      hourLabel: isLive
+        ? `${fmt.hhmm} (HIỆN TẠI)`
+        : isForecast
+          ? `${fmt.hhmm} (Dự báo)`
+          : fmt.hhmm,
+      isLive,
+      isForecast,
+      cityMeanObservedPm25: p.obs,
+      cityMeanModelPm25: p.mod,
+      windSpeedKmh: p.wind,
+      windDirectionDeg: p.dir,
+      temperatureC: p.temp,
+      humidityPct: p.hum,
+      precipitationMm: p.rain,
+    };
+  });
+}
+
+export const VERIFIED_TIMELINE_SLOTS: TimelineSlot[] = buildDynamicTimelineSlots();
 
 export const VERIFIED_ALERTS: AirQualityAlertItem[] = [
   {

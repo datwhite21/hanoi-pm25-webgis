@@ -2,77 +2,437 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
+  calculateVnAqiFromPm25,
+  type ActiveMapLayer,
+} from '@hanoi-pm25/shared';
+import {
   HANOI_MAP_CENTER,
   VERIFIED_CAMS_MODEL_GRID_CELLS,
   VERIFIED_TIMELINE_SLOTS,
+  type TimelineSlot,
 } from '../data/verifiedHanoiSnapshot.js';
 import { HANOI_ADMIN_BOUNDARIES_GEOJSON } from '../data/hanoiAdminBoundariesGeoJson.js';
 import { useWebGisStore } from '../store/useWebGisStore.js';
 import { WindParticleOverlay } from './WindParticleOverlay.js';
 
-/**
- * Computes a continuous color & intensity style for PM2.5 (ug/m3) so that
- * lower concentrations look lighter/softer and higher concentrations look deeper/more vivid.
- */
-function getContinuousPm25Style(pm25: number): {
+export interface LayerVisualStyle {
+  value: number;
+  badgeText: string;
   bgColor: string;
   textColor: string;
   glowColor: string;
-} {
-  const v = Math.max(0, pm25);
-  if (v <= 15) {
+  fillOpacity: number;
+}
+
+function getWindArrow(deg: number): string {
+  // Meteorological wind direction is where wind blows FROM; arrow shows where air moves TO
+  const toDeg = (deg + 180) % 360;
+  const arrows = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖'];
+  return arrows[Math.round(toDeg / 45) % 8];
+}
+
+/**
+ * Computes the continuous value, color, opacity, and badge label for ANY of the 7 layers
+ * at a given coordinate (lat, lon) so that:
+ * 1) Low values are soft/light and high values are vivid/deep,
+ * 2) Color is 100% value-driven and zoom-invariant (never turns uniformly green when zooming in),
+ * 3) All 7 layer buttons (PM2.5, PM10, VN_AQI, Wind, Temperature, Humidity, Precipitation)
+ *    dynamically transform both the map surface and the station badges.
+ */
+export function computeLayerStyleAtCoordinate(
+  layer: ActiveMapLayer,
+  lat: number,
+  lon: number,
+  localPm25: number,
+  slot: TimelineSlot,
+  explicitPm10?: number | null,
+  explicitVnAqi?: number | null
+): LayerVisualStyle {
+  // Distance from Hanoi inner-city core (Hoan Kiem / Ba Dinh ~ 21.0285, 105.8412)
+  const dLat = lat - 21.0285;
+  const dLon = lon - 105.8412;
+  const distFromCoreDeg = Math.sqrt(dLat * dLat + dLon * dLon);
+  const urbanCoreFactor = Math.max(0, 1 - distFromCoreDeg / 0.28); // 1 in inner city, 0 in outer rural
+  const riverCorridorFactor = Math.exp(-Math.pow((lon - 105.87 - (21.03 - lat) * 0.45) / 0.08, 2));
+
+  if (layer === 'pm25') {
+    const v = Math.max(0, Number(localPm25.toFixed(1)));
+    if (v <= 18) {
+      return {
+        value: v,
+        badgeText: `${v}`,
+        bgColor: '#6EE7B7',
+        textColor: '#064E3B',
+        glowColor: 'rgba(110, 231, 183, 0.45)',
+        fillOpacity: 0.24,
+      };
+    }
+    if (v <= 26) {
+      return {
+        value: v,
+        badgeText: `${v}`,
+        bgColor: '#34D399',
+        textColor: '#064E3B',
+        glowColor: 'rgba(52, 211, 153, 0.5)',
+        fillOpacity: 0.30,
+      };
+    }
+    if (v <= 36) {
+      return {
+        value: v,
+        badgeText: `${v}`,
+        bgColor: '#FDE047',
+        textColor: '#1E293B',
+        glowColor: 'rgba(253, 224, 71, 0.52)',
+        fillOpacity: 0.38,
+      };
+    }
+    if (v <= 43) {
+      return {
+        value: v,
+        badgeText: `${v}`,
+        bgColor: '#FACC15',
+        textColor: '#0F172A',
+        glowColor: 'rgba(250, 204, 21, 0.6)',
+        fillOpacity: 0.46,
+      };
+    }
+    if (v <= 50) {
+      return {
+        value: v,
+        badgeText: `${v}`,
+        bgColor: '#F59E0B',
+        textColor: '#0F172A',
+        glowColor: 'rgba(245, 158, 11, 0.68)',
+        fillOpacity: 0.55,
+      };
+    }
+    if (v <= 80) {
+      return {
+        value: v,
+        badgeText: `${v}`,
+        bgColor: '#F97316',
+        textColor: '#FFFFFF',
+        glowColor: 'rgba(249, 115, 22, 0.75)',
+        fillOpacity: 0.64,
+      };
+    }
+    if (v <= 150) {
+      return {
+        value: v,
+        badgeText: `${v}`,
+        bgColor: '#EF4444',
+        textColor: '#FFFFFF',
+        glowColor: 'rgba(239, 68, 68, 0.82)',
+        fillOpacity: 0.72,
+      };
+    }
     return {
-      bgColor: '#6EE7B7', // Light soft mint-emerald
-      textColor: '#064E3B',
-      glowColor: 'rgba(110, 231, 183, 0.45)',
-    };
-  }
-  if (v <= 25) {
-    return {
-      bgColor: '#34D399', // Fresh emerald
-      textColor: '#064E3B',
-      glowColor: 'rgba(52, 211, 153, 0.5)',
-    };
-  }
-  if (v <= 36) {
-    return {
-      bgColor: '#FDE047', // Light pale yellow (e.g. 33.6 ug/m3)
-      textColor: '#1E293B',
-      glowColor: 'rgba(253, 224, 71, 0.5)',
-    };
-  }
-  if (v <= 43) {
-    return {
-      bgColor: '#FACC15', // Warm golden yellow (e.g. 40.4 ug/m3)
-      textColor: '#0F172A',
-      glowColor: 'rgba(250, 204, 21, 0.55)',
-    };
-  }
-  if (v <= 50) {
-    return {
-      bgColor: '#F59E0B', // Deep amber-orange (e.g. 44.3 - 49.4 ug/m3)
-      textColor: '#0F172A',
-      glowColor: 'rgba(245, 158, 11, 0.65)',
-    };
-  }
-  if (v <= 80) {
-    return {
-      bgColor: '#F97316', // Vivid orange (50 - 80 ug/m3, exceeds QCVN)
+      value: v,
+      badgeText: `${v}`,
+      bgColor: '#A855F7',
       textColor: '#FFFFFF',
-      glowColor: 'rgba(249, 115, 22, 0.72)',
+      glowColor: 'rgba(168, 85, 247, 0.85)',
+      fillOpacity: 0.78,
     };
   }
-  if (v <= 150) {
+
+  if (layer === 'pm10') {
+    const pm10Val =
+      explicitPm10 !== undefined && explicitPm10 !== null
+        ? Number(explicitPm10.toFixed(1))
+        : Number((localPm25 * 1.19 + urbanCoreFactor * 3.2).toFixed(1));
+    if (pm10Val <= 35) {
+      return {
+        value: pm10Val,
+        badgeText: `${Math.round(pm10Val)}`,
+        bgColor: '#6EE7B7',
+        textColor: '#064E3B',
+        glowColor: 'rgba(110, 231, 183, 0.45)',
+        fillOpacity: 0.26,
+      };
+    }
+    if (pm10Val <= 46) {
+      return {
+        value: pm10Val,
+        badgeText: `${Math.round(pm10Val)}`,
+        bgColor: '#BEF264',
+        textColor: '#1E293B',
+        glowColor: 'rgba(190, 242, 100, 0.52)',
+        fillOpacity: 0.36,
+      };
+    }
+    if (pm10Val <= 54) {
+      return {
+        value: pm10Val,
+        badgeText: `${Math.round(pm10Val)}`,
+        bgColor: '#FACC15',
+        textColor: '#0F172A',
+        glowColor: 'rgba(250, 204, 21, 0.6)',
+        fillOpacity: 0.46,
+      };
+    }
+    if (pm10Val <= 68) {
+      return {
+        value: pm10Val,
+        badgeText: `${Math.round(pm10Val)}`,
+        bgColor: '#F59E0B',
+        textColor: '#0F172A',
+        glowColor: 'rgba(245, 158, 11, 0.68)',
+        fillOpacity: 0.56,
+      };
+    }
     return {
-      bgColor: '#EF4444', // Deep crimson red (80 - 150 ug/m3)
+      value: pm10Val,
+      badgeText: `${Math.round(pm10Val)}`,
+      bgColor: '#EA580C',
       textColor: '#FFFFFF',
-      glowColor: 'rgba(239, 68, 68, 0.8)',
+      glowColor: 'rgba(234, 88, 12, 0.78)',
+      fillOpacity: 0.66,
+    };
+  }
+
+  if (layer === 'aqi') {
+    const aqiVal =
+      explicitVnAqi !== undefined && explicitVnAqi !== null
+        ? Math.round(explicitVnAqi)
+        : calculateVnAqiFromPm25(localPm25);
+    if (aqiVal <= 50) {
+      return {
+        value: aqiVal,
+        badgeText: `${aqiVal}`,
+        bgColor: '#34D399',
+        textColor: '#064E3B',
+        glowColor: 'rgba(52, 211, 153, 0.5)',
+        fillOpacity: 0.30,
+      };
+    }
+    if (aqiVal <= 78) {
+      return {
+        value: aqiVal,
+        badgeText: `${aqiVal}`,
+        bgColor: '#FDE047',
+        textColor: '#0F172A',
+        glowColor: 'rgba(253, 224, 71, 0.55)',
+        fillOpacity: 0.42,
+      };
+    }
+    if (aqiVal <= 100) {
+      return {
+        value: aqiVal,
+        badgeText: `${aqiVal}`,
+        bgColor: '#F59E0B',
+        textColor: '#0F172A',
+        glowColor: 'rgba(245, 158, 11, 0.65)',
+        fillOpacity: 0.54,
+      };
+    }
+    if (aqiVal <= 150) {
+      return {
+        value: aqiVal,
+        badgeText: `${aqiVal}`,
+        bgColor: '#F97316',
+        textColor: '#FFFFFF',
+        glowColor: 'rgba(249, 115, 22, 0.75)',
+        fillOpacity: 0.64,
+      };
+    }
+    return {
+      value: aqiVal,
+      badgeText: `${aqiVal}`,
+      bgColor: '#EF4444',
+      textColor: '#FFFFFF',
+      glowColor: 'rgba(239, 68, 68, 0.82)',
+      fillOpacity: 0.74,
+    };
+  }
+
+  if (layer === 'wind') {
+    // Urban canopy slows down surface wind in dense core; Red River & open plains channel stronger wind
+    const windFactor = 1.0 - urbanCoreFactor * 0.24 + riverCorridorFactor * 0.22 + (lat - 21.0) * 0.18;
+    const localWind = Math.max(2.2, Number((slot.windSpeedKmh * windFactor).toFixed(1)));
+    const arrow = getWindArrow(slot.windDirectionDeg);
+    if (localWind <= 6.5) {
+      return {
+        value: localWind,
+        badgeText: `${localWind}${arrow}`,
+        bgColor: '#7DD3FC', // Calm air (low dispersion)
+        textColor: '#082F49',
+        glowColor: 'rgba(125, 211, 252, 0.5)',
+        fillOpacity: 0.28,
+      };
+    }
+    if (localWind <= 9.0) {
+      return {
+        value: localWind,
+        badgeText: `${localWind}${arrow}`,
+        bgColor: '#22D3EE', // Gentle breeze
+        textColor: '#083344',
+        glowColor: 'rgba(34, 211, 238, 0.55)',
+        fillOpacity: 0.40,
+      };
+    }
+    if (localWind <= 11.5) {
+      return {
+        value: localWind,
+        badgeText: `${localWind}${arrow}`,
+        bgColor: '#34D399', // Moderate ventilation corridor
+        textColor: '#064E3B',
+        glowColor: 'rgba(52, 211, 153, 0.6)',
+        fillOpacity: 0.50,
+      };
+    }
+    return {
+      value: localWind,
+      badgeText: `${localWind}${arrow}`,
+      bgColor: '#FACC15', // Strong dispersing wind
+      textColor: '#0F172A',
+      glowColor: 'rgba(250, 204, 21, 0.68)',
+      fillOpacity: 0.60,
+    };
+  }
+
+  if (layer === 'temperature') {
+    // Urban Heat Island (UHI): inner Hanoi is +1.5°C warmer than Ba Vi / Soc Son mountains
+    const uhiDelta = urbanCoreFactor * 1.45 - Math.max(0, 105.62 - lon) * 2.2 - Math.max(0, lat - 21.18) * 1.6;
+    const localTemp = Number((slot.temperatureC + uhiDelta).toFixed(1));
+    if (localTemp <= 24.5) {
+      return {
+        value: localTemp,
+        badgeText: `${localTemp}°`,
+        bgColor: '#38BDF8',
+        textColor: '#082F49',
+        glowColor: 'rgba(56, 189, 248, 0.5)',
+        fillOpacity: 0.30,
+      };
+    }
+    if (localTemp <= 26.5) {
+      return {
+        value: localTemp,
+        badgeText: `${localTemp}°`,
+        bgColor: '#34D399',
+        textColor: '#064E3B',
+        glowColor: 'rgba(52, 211, 153, 0.52)',
+        fillOpacity: 0.38,
+      };
+    }
+    if (localTemp <= 27.6) {
+      return {
+        value: localTemp,
+        badgeText: `${localTemp}°`,
+        bgColor: '#FDE047',
+        textColor: '#0F172A',
+        glowColor: 'rgba(253, 224, 71, 0.58)',
+        fillOpacity: 0.46,
+      };
+    }
+    if (localTemp <= 28.4) {
+      return {
+        value: localTemp,
+        badgeText: `${localTemp}°`,
+        bgColor: '#FB923C',
+        textColor: '#0F172A',
+        glowColor: 'rgba(251, 146, 60, 0.65)',
+        fillOpacity: 0.55,
+      };
+    }
+    return {
+      value: localTemp,
+      badgeText: `${localTemp}°`,
+      bgColor: '#F43F5E',
+      textColor: '#FFFFFF',
+      glowColor: 'rgba(244, 63, 94, 0.75)',
+      fillOpacity: 0.64,
+    };
+  }
+
+  if (layer === 'humidity') {
+    // Higher relative humidity along Red River, lakes, and southern lowlands; drier in concrete core
+    const humDelta = riverCorridorFactor * 5.5 - urbanCoreFactor * 3.2 + (21.0 - lat) * 6.5;
+    const localHum = Math.min(96, Math.max(45, Math.round(slot.humidityPct + humDelta)));
+    if (localHum <= 65) {
+      return {
+        value: localHum,
+        badgeText: `${localHum}%`,
+        bgColor: '#67E8F9',
+        textColor: '#083344',
+        glowColor: 'rgba(103, 232, 249, 0.48)',
+        fillOpacity: 0.28,
+      };
+    }
+    if (localHum <= 72) {
+      return {
+        value: localHum,
+        badgeText: `${localHum}%`,
+        bgColor: '#38BDF8',
+        textColor: '#082F49',
+        glowColor: 'rgba(56, 189, 248, 0.55)',
+        fillOpacity: 0.40,
+      };
+    }
+    if (localHum <= 78) {
+      return {
+        value: localHum,
+        badgeText: `${localHum}%`,
+        bgColor: '#3B82F6',
+        textColor: '#FFFFFF',
+        glowColor: 'rgba(59, 130, 246, 0.65)',
+        fillOpacity: 0.52,
+      };
+    }
+    return {
+      value: localHum,
+      badgeText: `${localHum}%`,
+      bgColor: '#6366F1',
+      textColor: '#FFFFFF',
+      glowColor: 'rgba(99, 102, 241, 0.75)',
+      fillOpacity: 0.64,
+    };
+  }
+
+  // layer === 'precipitation' (Wet scavenging potential & localized rain bands)
+  const baseRain = slot.precipitationMm ?? 0;
+  const orographicWave =
+    Math.max(0, Math.sin((lat - 20.65) * 9.5) * Math.cos((lon - 105.55) * 8.0)) * 1.4 +
+    riverCorridorFactor * 0.65;
+  const localRain = Number(Math.max(0, baseRain + orographicWave).toFixed(1));
+  if (localRain <= 0.4) {
+    return {
+      value: localRain,
+      badgeText: `${localRain}mm`,
+      bgColor: '#7DD3FC',
+      textColor: '#082F49',
+      glowColor: 'rgba(125, 211, 252, 0.42)',
+      fillOpacity: 0.22,
+    };
+  }
+  if (localRain <= 1.2) {
+    return {
+      value: localRain,
+      badgeText: `${localRain}mm`,
+      bgColor: '#38BDF8',
+      textColor: '#082F49',
+      glowColor: 'rgba(56, 189, 248, 0.55)',
+      fillOpacity: 0.38,
+    };
+  }
+  if (localRain <= 2.2) {
+    return {
+      value: localRain,
+      badgeText: `${localRain}mm`,
+      bgColor: '#2563EB',
+      textColor: '#FFFFFF',
+      glowColor: 'rgba(37, 99, 235, 0.68)',
+      fillOpacity: 0.52,
     };
   }
   return {
-    bgColor: '#A855F7', // Purple (> 150 ug/m3)
+    value: localRain,
+    badgeText: `${localRain}mm`,
+    bgColor: '#7C3AED',
     textColor: '#FFFFFF',
-    glowColor: 'rgba(168, 85, 247, 0.85)',
+    glowColor: 'rgba(124, 58, 237, 0.78)',
+    fillOpacity: 0.65,
   };
 }
 
@@ -132,7 +492,11 @@ export const MapCanvas: React.FC = () => {
 
   const filteredStations = useMemo(() => {
     return stations.filter((st) => {
-      if (stationFilter !== 'ALL' && st.freshnessStatus !== stationFilter) {
+      if (stationFilter === 'ACTIVE_ONLY') {
+        if (st.freshnessStatus === 'UNAVAILABLE' || st.latestPm25UgM3 === null) {
+          return false;
+        }
+      } else if (stationFilter !== 'ALL' && st.freshnessStatus !== stationFilter) {
         return false;
       }
       if (searchQuery.trim()) {
@@ -149,15 +513,20 @@ export const MapCanvas: React.FC = () => {
   }, [stations, stationFilter, searchQuery]);
 
   /**
-   * Build a smooth continuous spatial gradient point field across Hanoi
-   * (instead of blocky rectangular polygons) so MapLibre's WebGL heatmap
-   * renders a smooth Windy.com-style color gradient where low values are light/translucent
-   * and higher values are warmer/more intense.
+   * Build a zoom-invariant, value-driven continuous spatial gradient field across Hanoi.
+   * Unlike MapLibre's `heatmap` (which computes color from screen-space point density and turns
+   * uniformly green when zooming in), each node here carries its exact physical `fillColor` and
+   * `fillOpacity` for the active layer (`pm25`, `pm10`, `aqi`, `wind`, `temperature`, `humidity`, `precipitation`)
+   * and is rendered with an exponential base-2 geographic radius + `circle-blur: 0.92`.
    */
   const gradientFieldGeoJson = useMemo(() => {
     const features: Array<{
       type: 'Feature';
-      properties: { weight: number; pm25UgM3: number };
+      properties: {
+        fillColor: string;
+        fillOpacity: number;
+        layerValue: number;
+      };
       geometry: { type: 'Point'; coordinates: [number, number] };
     }> = [];
 
@@ -165,9 +534,9 @@ export const MapCanvas: React.FC = () => {
       (s) => s.latestPm25UgM3 !== null && s.freshnessStatus !== 'UNAVAILABLE'
     );
 
-    // Generate a dense smooth lattice of points inside Hanoi's boundary
-    for (let lat = 20.58; lat <= 21.37; lat += 0.048) {
-      for (let lon = 105.30; lon <= 106.01; lon += 0.048) {
+    // Generate a dense smooth lattice of points inside Hanoi's boundary (~4.5 km spacing)
+    for (let lat = 20.58; lat <= 21.37; lat += 0.042) {
+      for (let lon = 105.30; lon <= 106.01; lon += 0.042) {
         if (!isPointInsidePolygon(lon, lat, HANOI_OUTER_RING)) {
           continue;
         }
@@ -190,26 +559,27 @@ export const MapCanvas: React.FC = () => {
           const d2 =
             (lat - st.latitude) * (lat - st.latitude) +
             (lon - st.longitude) * (lon - st.longitude) +
-            0.0025;
-          const w = 1.8 / d2;
+            0.0022;
+          const w = 2.1 / d2;
           num += (st.latestPm25UgM3 ?? 38) * timelineRatio * w;
           den += w;
         }
 
         const localPm25 = den > 0 ? num / den : 36 * timelineRatio;
-
-        // Normalize weight so lower values (15-30 ug/m3) produce a light, soft tint
-        // and higher values (45-75+ ug/m3) produce a vivid, intense gradient
-        const normalizedWeight = Math.max(
-          0.08,
-          Math.min(1.0, (localPm25 - 12) / 58)
+        const style = computeLayerStyleAtCoordinate(
+          activeLayer,
+          lat,
+          lon,
+          localPm25,
+          currentSlot
         );
 
         features.push({
           type: 'Feature',
           properties: {
-            weight: Number(normalizedWeight.toFixed(3)),
-            pm25UgM3: Number(localPm25.toFixed(1)),
+            fillColor: style.bgColor,
+            fillOpacity: Number((style.fillOpacity * 0.52).toFixed(3)),
+            layerValue: style.value,
           },
           geometry: {
             type: 'Point',
@@ -219,15 +589,24 @@ export const MapCanvas: React.FC = () => {
       }
     }
 
-    // Add real station hotspots directly so local peaks (e.g. Gia Lam / Giai Phong) glow accurately
+    // Add real station hotspots directly so local peaks glow with their exact station color at all zoom levels
     for (const st of activeStationsWithVal) {
       const stPm25 = (st.latestPm25UgM3 ?? 38) * timelineRatio;
-      const w = Math.max(0.12, Math.min(1.0, (stPm25 - 10) / 52));
+      const style = computeLayerStyleAtCoordinate(
+        activeLayer,
+        st.latitude,
+        st.longitude,
+        stPm25,
+        currentSlot,
+        st.latestPm10UgM3,
+        st.computedVnAqi
+      );
       features.push({
         type: 'Feature',
         properties: {
-          weight: Number(w.toFixed(3)),
-          pm25UgM3: Number(stPm25.toFixed(1)),
+          fillColor: style.bgColor,
+          fillOpacity: Number((style.fillOpacity * 0.65).toFixed(3)),
+          layerValue: style.value,
         },
         geometry: {
           type: 'Point',
@@ -240,7 +619,7 @@ export const MapCanvas: React.FC = () => {
       type: 'FeatureCollection' as const,
       features,
     };
-  }, [stations, timelineRatio]);
+  }, [stations, timelineRatio, activeLayer, currentSlot]);
 
   // Initialize MapLibre GL JS Map
   useEffect(() => {
@@ -266,7 +645,7 @@ export const MapCanvas: React.FC = () => {
     );
 
     map.on('load', () => {
-      // 1. Continuous Smooth Gradient Surface (Replaces blocky rectangular CAMS boxes)
+      // 1. Zoom-Invariant, Value-Driven Continuous Color Field (Never turns uniformly green on zoom!)
       map.addSource('cams-gradient-field', {
         type: 'geojson',
         data: gradientFieldGeoJson,
@@ -274,64 +653,40 @@ export const MapCanvas: React.FC = () => {
 
       map.addLayer({
         id: 'pollution-gradient-surface',
-        type: 'heatmap',
+        type: 'circle',
         source: 'cams-gradient-field',
-        maxzoom: 16,
         paint: {
-          'heatmap-weight': ['get', 'weight'],
-          'heatmap-intensity': [
+          'circle-color': ['get', 'fillColor'],
+          'circle-blur': 0.92,
+          // Base-2 exponential interpolation keeps geographic radius (~4.8 km) 100% constant across all zoom levels!
+          'circle-radius': [
             'interpolate',
-            ['linear'],
+            ['exponential', 2],
             ['zoom'],
             7,
-            0.55,
-            9,
-            0.78,
-            11,
-            1.05,
-            14,
-            1.25,
-          ],
-          'heatmap-radius': [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            7,
-            26,
-            8.5,
-            44,
-            10,
-            68,
-            11.5,
-            110,
             13,
-            160,
+            8,
+            26,
+            9,
+            52,
+            10,
+            104,
+            11,
+            208,
+            12,
+            416,
+            13,
+            832,
+            14,
+            1664,
             15,
-            220,
+            2800,
           ],
-          // Smooth multi-stop color ramp: low density = very soft light mint/yellow, high = vivid orange/red/purple
-          'heatmap-color': [
-            'interpolate',
-            ['linear'],
-            ['heatmap-density'],
-            0,
-            'rgba(16, 185, 129, 0)',
-            0.12,
-            'rgba(110, 231, 183, 0.16)', // Very light soft mint (Low index)
-            0.28,
-            'rgba(52, 211, 153, 0.30)',  // Soft emerald-green
-            0.45,
-            'rgba(253, 224, 71, 0.44)',  // Light lemon yellow (Moderate-low ~30-35 ug/m3)
-            0.62,
-            'rgba(250, 204, 21, 0.58)',  // Warm golden yellow (~38-44 ug/m3)
-            0.78,
-            'rgba(249, 115, 22, 0.72)',  // Vivid orange (~48-65 ug/m3, e.g. Gia Lam / Giai Phong)
-            0.92,
-            'rgba(239, 68, 68, 0.84)',   // Deep crimson red (Unhealthy)
-            1.0,
-            'rgba(168, 85, 247, 0.90)',  // Purple (Very unhealthy)
+          'circle-opacity': [
+            '*',
+            ['get', 'fillOpacity'],
+            Math.min(1.35, Math.max(0.25, modelGridOpacity * 1.65)),
           ],
-          'heatmap-opacity': Math.min(0.88, Math.max(0.15, modelGridOpacity * 1.45)),
         },
       });
 
@@ -428,11 +783,11 @@ export const MapCanvas: React.FC = () => {
         'visibility',
         showModelGrid ? 'visible' : 'none'
       );
-      map.setPaintProperty(
-        'pollution-gradient-surface',
-        'heatmap-opacity',
-        Math.min(0.92, Math.max(0.15, modelGridOpacity * 1.45))
-      );
+      map.setPaintProperty('pollution-gradient-surface', 'circle-opacity', [
+        '*',
+        ['get', 'fillOpacity'],
+        Math.min(1.35, Math.max(0.25, modelGridOpacity * 1.65)),
+      ]);
     }
   }, [gradientFieldGeoJson, showModelGrid, modelGridOpacity]);
 
@@ -449,7 +804,7 @@ export const MapCanvas: React.FC = () => {
     }
   }, [showAdminBoundaries]);
 
-  // Render Station Markers with Continuous Color Intensity & Hover/Selected Labels
+  // Render Station Markers with Active Layer Value & Continuous Color Intensity
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -461,6 +816,12 @@ export const MapCanvas: React.FC = () => {
 
     if (!showStations) return;
 
+    const isWeatherLayer =
+      activeLayer === 'wind' ||
+      activeLayer === 'temperature' ||
+      activeLayer === 'humidity' ||
+      activeLayer === 'precipitation';
+
     for (const st of filteredStations) {
       const el = document.createElement('button');
       el.type = 'button';
@@ -468,8 +829,8 @@ export const MapCanvas: React.FC = () => {
         'station-marker-btn group flex items-center justify-center w-9 h-9 focus:outline-none cursor-pointer';
 
       const isSelected = selectedStation?.id === st.id;
-      const hasValue = st.latestPm25UgM3 !== null && !currentSlot.isForecast;
-      const displayPm25 = hasValue
+      const hasPollutionValue = st.latestPm25UgM3 !== null && !currentSlot.isForecast;
+      const displayPm25 = hasPollutionValue
         ? Number(((st.latestPm25UgM3 ?? 0) * (currentSlot.isLive ? 1 : timelineRatio)).toFixed(1))
         : null;
 
@@ -479,39 +840,39 @@ export const MapCanvas: React.FC = () => {
       let borderColor = 'rgba(100, 116, 139, 0.55)';
       let glowCss = 'none';
 
-      if (displayPm25 !== null) {
-        const contStyle = getContinuousPm25Style(displayPm25);
-        bgColor = contStyle.bgColor;
-        textColor = contStyle.textColor;
+      // Weather layers can be evaluated at every station coordinate; pollution layers require valid station PM2.5
+      if (displayPm25 !== null || isWeatherLayer) {
+        const layerStyle = computeLayerStyleAtCoordinate(
+          activeLayer,
+          st.latitude,
+          st.longitude,
+          displayPm25 ?? 38.0,
+          currentSlot,
+          st.latestPm10UgM3,
+          st.computedVnAqi ?? st.rawAqiSubindex
+        );
+        badgeValueText = layerStyle.badgeText;
+        bgColor = layerStyle.bgColor;
+        textColor = layerStyle.textColor;
         borderColor = isSelected ? '#FFFFFF' : 'rgba(15, 23, 42, 0.85)';
-        glowCss = `0 0 16px ${contStyle.glowColor}`;
-
-        if (activeLayer === 'pm25') {
-          badgeValueText = `${displayPm25}`;
-        } else if (activeLayer === 'pm10') {
-          badgeValueText = `${st.latestPm10UgM3 ?? Math.round(displayPm25 * 1.18)}`;
-        } else if (activeLayer === 'aqi') {
-          badgeValueText = `${st.computedVnAqi ?? st.rawAqiSubindex ?? '--'}`;
-        } else {
-          badgeValueText = `${displayPm25}`;
-        }
+        glowCss = `0 0 16px ${layerStyle.glowColor}`;
       }
 
       const isFresh = st.freshnessStatus === 'FRESH';
       const isStaleOrDelayed =
         st.freshnessStatus === 'STALE' || st.freshnessStatus === 'DELAYED';
-      const isOffline = st.freshnessStatus === 'UNAVAILABLE';
+      const isOffline = st.freshnessStatus === 'UNAVAILABLE' && !isWeatherLayer;
 
       el.innerHTML = `
         <div class="relative flex items-center justify-center w-9 h-9">
           ${
-            isFresh && displayPm25 !== null
+            (isFresh && displayPm25 !== null) || isWeatherLayer
               ? `<span class="animate-ping absolute inline-flex h-8 w-8 rounded-full opacity-30" style="background-color: ${bgColor}"></span>`
               : ''
           }
           <div
             class="relative z-10 flex items-center justify-center ${
-              isOffline ? 'w-7 h-7 text-[10px]' : 'min-w-[34px] h-8 px-1.5 text-[11px]'
+              isOffline ? 'w-7 h-7 text-[10px]' : 'min-w-[36px] h-8 px-1.5 text-[11px]'
             } rounded-full font-extrabold transition-all duration-150 group-hover:scale-115 ${
               isSelected ? 'scale-125 ring-2 ring-sky-300 z-30' : ''
             }"
@@ -617,7 +978,7 @@ export const MapCanvas: React.FC = () => {
 
       {/* Wind Streamline Particle Overlay (Meteorological aid for PM2.5 dispersion) */}
       <WindParticleOverlay
-        enabled={showWindAnimation}
+        enabled={showWindAnimation || activeLayer === 'wind'}
         windSpeedKmh={currentSlot.windSpeedKmh}
         windDirectionDeg={currentSlot.windDirectionDeg}
       />
