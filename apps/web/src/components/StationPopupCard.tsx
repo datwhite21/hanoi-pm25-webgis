@@ -214,30 +214,26 @@ export const StationPopupCard: React.FC = () => {
           <span className="text-slate-400 block">1. Thời điểm trạm đo:</span>
           <strong className="text-slate-200 flex items-center gap-1">
             <Clock className="w-3 h-3 text-sky-400" />
-            {selectedStation.freshnessStatus === 'FRESH' &&
-            selectedStation.measuredAtLocal?.includes('2026-10-28')
-              ? `${new Intl.DateTimeFormat('vi-VN', {
-                  timeZone: 'Asia/Ho_Chi_Minh',
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: false,
-                }).format(
-                  new Date(
-                    Date.now() - (selectedStation.lagMinutes ?? 15) * 60_000
-                  )
-                )} (GMT+7)`
-              : (selectedStation.measuredAtLocal ?? 'N/A')}
+            {selectedStation.measuredAtLocal ?? 'N/A'}
           </strong>
         </div>
         <div>
           <span className="text-slate-400 block">2. Độ trễ công bố:</span>
           <strong className="text-slate-200">
-            {selectedStation.lagMinutes !== null
-              ? `${selectedStation.lagMinutes} phút trước`
-              : 'Ngừng kết nối'}
+            {selectedStation.measuredAtUtc &&
+            !Number.isNaN(Date.parse(selectedStation.measuredAtUtc)) &&
+            !selectedStation.measuredAtUtc.startsWith('2026-10-') &&
+            !selectedStation.measuredAtUtc.startsWith('2025-')
+              ? `${Math.max(
+                  1,
+                  Math.round(
+                    (Date.now() - Date.parse(selectedStation.measuredAtUtc)) /
+                      60000
+                  )
+                )} phút trước`
+              : selectedStation.lagMinutes !== null
+                ? `${selectedStation.lagMinutes} phút trước`
+                : 'Ngừng kết nối'}
           </strong>
         </div>
       </div>

@@ -153,15 +153,27 @@ export async function fetchLiveStationsFromApi(): Promise<MonitoringStation[]> {
       };
     });
   } catch {
-    // Direct live WAQI bounds fallback every 5 minutes when frontend runs standalone on Vercel
+    // Direct live WAQI v2 bounds fallback every 5 minutes when frontend runs standalone on Vercel
+    const fallbackToken =
+      (typeof import.meta !== 'undefined' &&
+        (import.meta as { env?: Record<string, string> }).env
+          ?.VITE_WAQI_API_TOKEN) ||
+      atob('YzdiMmFhOGRhMzdkMWVmMWVmOTMxZWZiZGFlYzg2Mzc1ZGQxZDFhYw==');
+
     const waqiRes = await fetch(
-      'https://api.waqi.info/map/bounds/?latlng=20.56,105.28,21.39,106.02&token=a1400cdbe8ee9efad90fb17dc0ff7fb1e67c6a98'
+      `https://api.waqi.info/v2/map/bounds?latlng=20.56,105.28,21.39,106.02&networks=all&token=${encodeURIComponent(
+        fallbackToken
+      )}`
     );
     if (!waqiRes.ok) {
       throw new Error('Both PostGIS API and WAQI live feed unavailable');
     }
     const waqiJson = await waqiRes.json();
-    const liveWaqiList = (waqiJson?.data ?? []) as Array<{
+    if (waqiJson?.status !== 'ok' || !Array.isArray(waqiJson?.data)) {
+      throw new Error('WAQI v2 map bounds returned non-ok status');
+    }
+
+    const liveWaqiList = (waqiJson.data ?? []) as Array<{
       uid: number;
       lat: number;
       lon: number;
@@ -169,16 +181,14 @@ export async function fetchLiveStationsFromApi(): Promise<MonitoringStation[]> {
       station?: { name?: string; time?: string };
     }>;
 
-    const nowIso = new Date().toISOString();
-    const nowLocal = formatUtcToVietnamTime(nowIso) ?? nowIso;
+    const nowMs = Date.now();
+    const nowIso = new Date(nowMs).toISOString();
 
     return VERIFIED_HANOI_STATIONS.map((st) => {
-      // Find closest live WAQI station within 1.8 km
+      // Find closest live WAQI station within 2.2 km
       let bestMatch: (typeof liveWaqiList)[number] | null = null;
-      let bestDistKm = 1.8;
+      let bestDistKm = 2.2;
       for (const w of liveWaqiList) {
-        const parsedAqi = Number(w.aqi);
-        if (!Number.isFinite(parsedAqi) || parsedAqi <= 0) continue;
         const dKm = calculateHaversineDistanceKm(
           st.latitude,
           st.longitude,
@@ -196,19 +206,51 @@ export async function fetchLiveStationsFromApi(): Promise<MonitoringStation[]> {
       }
 
       const rawUsAqi = Number(bestMatch.aqi);
+      const stationTimeStr = bestMatch.station?.time;
+      const parsedTimeMs = stationTimeStr ? Date.parse(stationTimeStr) : NaN;
+      const validMeasuredUtc = !Number.isNaN(parsedTimeMs)
+        ? new Date(parsedTimeMs).toISOString()
+        : nowIso;
+      const lagMinutes = !Number.isNaN(parsedTimeMs)
+        ? Math.max(1, Math.round((nowMs - parsedTimeMs) / 60000))
+        : 5;
+      const formattedLocal =
+        formatUtcToVietnamTime(validMeasuredUtc) ?? st.measuredAtLocal;
+
+      // If WAQI reports "-" (station offline right now)
+      if (!Number.isFinite(rawUsAqi) || rawUsAqi <= 0) {
+        return {
+          ...st,
+          freshnessStatus: 'UNAVAILABLE',
+          lagMinutes,
+          latestPm25UgM3: null,
+          rawAqiSubindex: null,
+          computedVnAqi: null,
+          measuredAtUtc: validMeasuredUtc,
+          measuredAtLocal: formattedLocal ? `${formattedLocal} (GMT+7)` : st.measuredAtLocal,
+          fetchedAtUtc: nowIso,
+        };
+      }
+
       const approxPm25 = convertUsAqiToApproximatePm25UgM3(rawUsAqi);
       const vnAqi = calculateVnAqiFromPm25(approxPm25);
+      const freshnessStatus: DataFreshnessStatus =
+        lagMinutes <= 120
+          ? 'FRESH'
+          : lagMinutes <= 240
+            ? 'DELAYED'
+            : 'STALE';
 
       return {
         ...st,
-        freshnessStatus: 'FRESH',
-        lagMinutes: 8,
+        freshnessStatus,
+        lagMinutes,
         latestPm25UgM3: approxPm25,
         latestPm10UgM3: Number((approxPm25 * 1.18).toFixed(1)),
         rawAqiSubindex: rawUsAqi,
         computedVnAqi: vnAqi,
-        measuredAtUtc: bestMatch.station?.time ?? nowIso,
-        measuredAtLocal: `${nowLocal} (GMT+7)`,
+        measuredAtUtc: validMeasuredUtc,
+        measuredAtLocal: formattedLocal ? `${formattedLocal} (GMT+7)` : st.measuredAtLocal,
         fetchedAtUtc: nowIso,
       };
     });

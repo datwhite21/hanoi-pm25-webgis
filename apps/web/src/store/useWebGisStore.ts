@@ -227,11 +227,29 @@ export const useWebGisStore = create<WebGisState>((set, get) => ({
     }),
 
   inspectMapCoordinate: (lat, lon) => {
-    const localInspection = inspectArbitraryHanoiPoint(lat, lon);
+    const localInspection = inspectArbitraryHanoiPoint(
+      lat,
+      lon,
+      get().stations
+    );
     set({
       inspectedPoint: localInspection,
       selectedStation: null,
     });
+
+    const dName = localInspection.districtNameVi.toLowerCase();
+    const matchedCode = dName.includes('thanh xuân')
+      ? 'HN-TX'
+      : dName.includes('gia lâm') || dName.includes('đông')
+        ? 'HN-GL'
+        : dName.includes('tây hồ')
+          ? 'HN-TH'
+          : dName.includes('hà đông') || dName.includes('nam')
+            ? 'HN-HD'
+            : dName.includes('sóc sơn') || dName.includes('bắc')
+              ? 'HN-SS'
+              : 'HN-HBT';
+    void get().inspectAdministrativeArea(matchedCode);
 
     if (typeof window !== 'undefined' && typeof fetch === 'function') {
       fetchLivePointInspectionFromApi(lat, lon, get().stations)
@@ -255,13 +273,71 @@ export const useWebGisStore = create<WebGisState>((set, get) => ({
         backendConnected: true,
       });
     } catch {
-      // Fallback calculation from current stations in store
+      const DISTRICT_META: Record<
+        string,
+        { nameVi: string; keyword: string; areaSqKm: number }
+      > = {
+        'HN-HBT': {
+          nameVi: 'Quận Hai Bà Trưng',
+          keyword: 'hai bà trưng',
+          areaSqKm: 10.26,
+        },
+        'HN-TX': {
+          nameVi: 'Quận Thanh Xuân',
+          keyword: 'thanh xuân',
+          areaSqKm: 9.08,
+        },
+        'HN-GL': {
+          nameVi: 'Huyện Gia Lâm',
+          keyword: 'gia lâm',
+          areaSqKm: 116.6,
+        },
+        'HN-TH': {
+          nameVi: 'Quận Tây Hồ',
+          keyword: 'tây hồ',
+          areaSqKm: 24.38,
+        },
+        'HN-HD': {
+          nameVi: 'Quận Hà Đông',
+          keyword: 'hà đông',
+          areaSqKm: 49.64,
+        },
+        'HN-SS': {
+          nameVi: 'Huyện Sóc Sơn',
+          keyword: 'sóc sơn',
+          areaSqKm: 305.5,
+        },
+        'HN-LB': {
+          nameVi: 'Quận Long Biên',
+          keyword: 'long biên',
+          areaSqKm: 60.38,
+        },
+        'HN-CG': {
+          nameVi: 'Quận Cầu Giấy',
+          keyword: 'cầu giấy',
+          areaSqKm: 12.44,
+        },
+        'HN-BTL': {
+          nameVi: 'Quận Bắc Từ Liêm',
+          keyword: 'bắc từ liêm',
+          areaSqKm: 45.24,
+        },
+      };
+
+      const meta = DISTRICT_META[areaCode] ?? {
+        nameVi: areaCode,
+        keyword: areaCode.toLowerCase(),
+        areaSqKm: 28.5,
+      };
+
       const currentStations = get().stations;
       const areaStations = currentStations.filter((s) =>
-        s.districtNameVi.toLowerCase().includes(areaCode.toLowerCase())
+        s.districtNameVi.toLowerCase().includes(meta.keyword)
       );
       const active = areaStations.filter(
-        (s) => s.freshnessStatus === 'FRESH' && s.latestPm25UgM3 !== null
+        (s) =>
+          (s.freshnessStatus === 'FRESH' || s.freshnessStatus === 'DELAYED') &&
+          s.latestPm25UgM3 !== null
       );
       const avg =
         active.length > 0
@@ -277,8 +353,8 @@ export const useWebGisStore = create<WebGisState>((set, get) => ({
         selectedAreaStats: {
           area: {
             code: areaCode,
-            nameVi: areaCode,
-            areaSqKm: 28.5,
+            nameVi: meta.nameVi,
+            areaSqKm: meta.areaSqKm,
           },
           observedStatistics: {
             hasActiveStation: active.length > 0,
@@ -288,8 +364,8 @@ export const useWebGisStore = create<WebGisState>((set, get) => ({
             vnAqi: avg !== null ? calculateVnAqiFromPm25(avg) : null,
             scientificNoteVi:
               active.length > 0
-                ? `Khu vực có ${active.length} trạm quan trắc đang hoạt động.`
-                : 'Khu vực hiện không có trạm quan trắc mặt đất đang hoạt động. Hệ thống không nội suy giả cấp xã/phường; vui lòng tham khảo ô lưới CAMS 0.4° (~40 km).',
+                ? `Khu vực ${meta.nameVi} có ${active.length}/${areaStations.length} trạm đang phát dữ liệu thực tế (${active.map((st) => st.name).join(', ')}).`
+                : `Khu vực ${meta.nameVi} hiện không có trạm quan trắc mặt đất đang phát tín hiệu thời gian thực. Hệ thống không nội suy giả cấp xã/phường; vui lòng tham khảo ô lưới CAMS 0.4° (~40 km).`,
             stations: areaStations.map((s) => ({
               externalStationId: s.externalStationId,
               name: s.name,
