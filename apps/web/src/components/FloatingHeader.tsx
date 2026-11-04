@@ -75,32 +75,32 @@ export const FloatingHeader: React.FC = () => {
   };
 
   return (
-    <header className="fixed top-3 left-3 right-3 z-30 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+    <header className="relative z-30 w-full shrink-0 flex flex-wrap items-center justify-between gap-1.5 pointer-events-none">
       {/* Left Brand + Search Box */}
-      <div className="flex items-center gap-2 pointer-events-auto">
-        <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-slate-900/90 border border-slate-700/70 backdrop-blur-md shadow-xl">
-          <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-sky-500 text-slate-950 font-extrabold shadow">
+      <div className="flex items-center gap-1.5 pointer-events-auto">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-slate-900/92 border border-slate-700/75 backdrop-blur-md shadow-xl">
+          <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-sky-500 text-slate-950 font-extrabold text-xs shadow">
             PM
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <h1 className="text-sm md:text-base font-extrabold tracking-tight text-white">
+              <h1 className="text-xs md:text-sm font-extrabold tracking-tight text-white whitespace-nowrap">
                 Hanoi PM2.5 GIS
               </h1>
-              <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 whitespace-nowrap">
                 Near-Realtime
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 hidden sm:block">
+            <p className="text-[10px] text-slate-400 hidden 2xl:block whitespace-nowrap">
               Giám sát, Phân tích & Cảnh báo Bụi mịn PM2.5 Thành phố Hà Nội
             </p>
           </div>
         </div>
 
         {/* Search Input with Station + Open-Meteo Geocoding Dropdown */}
-        <div className="relative w-56 sm:w-72">
-          <div className="flex items-center gap-2 px-3 py-2.5 rounded-2xl bg-slate-900/90 border border-slate-700/70 backdrop-blur-md shadow-xl">
-            <Search className="w-4 h-4 text-slate-400 shrink-0" />
+        <div className="relative w-44 sm:w-56 lg:w-64">
+          <div className="flex items-center gap-1.5 px-2.5 py-2 rounded-2xl bg-slate-900/92 border border-slate-700/75 backdrop-blur-md shadow-xl">
+            <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             <input
               type="text"
               value={searchQuery}
@@ -108,7 +108,7 @@ export const FloatingHeader: React.FC = () => {
               onBlur={() => setTimeout(() => setIsSearchFocused(false), 180)}
               onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Tìm trạm, xã/phường, quận/huyện..."
-              className="w-full bg-transparent text-xs md:text-sm text-slate-100 placeholder-slate-400 focus:outline-none"
+              className="w-full bg-transparent text-xs text-slate-100 placeholder-slate-400 focus:outline-none"
             />
             {searchQuery && (
               <button
@@ -180,20 +180,20 @@ export const FloatingHeader: React.FC = () => {
       </div>
 
       {/* Right Status Pills + Action Buttons */}
-      <div className="flex flex-wrap items-center gap-2 pointer-events-auto">
+      <div className="flex flex-wrap items-center gap-1.5 pointer-events-auto">
         {/* Measurement Timestamp & Weather Quick Summary */}
-        <div className="hidden xl:flex items-center gap-3 px-3.5 py-2 rounded-2xl bg-slate-900/90 border border-slate-700/70 backdrop-blur-md text-xs shadow-xl">
-          <div className="flex items-center gap-1.5 text-slate-200">
+        <div className="hidden 2xl:flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-slate-900/92 border border-slate-700/75 backdrop-blur-md text-[11px] shadow-xl whitespace-nowrap">
+          <div className="flex items-center gap-1 text-slate-200">
             <Clock className="w-3.5 h-3.5 text-emerald-400" />
             <span>
-              Đo mới nhất: <strong>{currentSlot.hourLabel}</strong> ({currentSlot.dayLabelVi})
+              <strong>{currentSlot.hourLabel}</strong>
             </span>
           </div>
           <span className="text-slate-700">|</span>
-          <div className="flex items-center gap-1.5 text-slate-300">
+          <div className="flex items-center gap-1 text-slate-300">
             <Wind className="w-3.5 h-3.5 text-sky-400" />
             <span>
-              Gió ĐN <strong>{currentSlot.windSpeedKmh} km/h</strong> · {currentSlot.temperatureC}°C ·{' '}
+              Gió <strong>{currentSlot.windSpeedKmh} km/h</strong> · {currentSlot.temperatureC}°C ·{' '}
               {currentSlot.humidityPct}% RH
             </span>
           </div>
@@ -204,7 +204,7 @@ export const FloatingHeader: React.FC = () => {
           type="button"
           onClick={() => syncWithPostgisBackend()}
           disabled={isSyncingBackend}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-sky-500/40 backdrop-blur-md text-xs font-medium text-sky-200 shadow-xl transition"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-slate-900/92 hover:bg-slate-800 border border-sky-500/40 backdrop-blur-md text-xs font-medium text-sky-200 shadow-xl transition whitespace-nowrap"
           title={
             lastSyncedAtLocal
               ? `Đồng bộ PostGIS lần cuối lúc ${lastSyncedAtLocal}`
@@ -218,8 +218,8 @@ export const FloatingHeader: React.FC = () => {
           />
           <span className="hidden md:inline">
             {backendConnected
-              ? `PostGIS Live (${stations.length} trạm)`
-              : `Trạm Hà Nội (${stations.length})`}
+              ? `PostGIS (${stations.length})`
+              : `Trạm HN (${stations.length})`}
           </span>
         </button>
 
@@ -227,12 +227,12 @@ export const FloatingHeader: React.FC = () => {
         <button
           type="button"
           onClick={() => openDrawer('sources')}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/70 backdrop-blur-md text-xs font-medium text-slate-200 shadow-xl transition"
+          className="flex items-center gap-1 px-2.5 py-1.5 rounded-2xl bg-slate-900/92 hover:bg-slate-800 border border-slate-700/75 backdrop-blur-md text-xs font-medium text-slate-200 shadow-xl transition whitespace-nowrap"
           title="Xem trạng thái kết nối các nguồn dữ liệu thực tế"
         >
           <Database className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="hidden sm:inline">Nguồn dữ liệu:</span>
-          <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">
+          <span className="hidden lg:inline">Nguồn:</span>
+          <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold text-[11px]">
             {healthySourcesCount}/{dataSources.length} OK
           </span>
         </button>
@@ -241,11 +241,11 @@ export const FloatingHeader: React.FC = () => {
         <button
           type="button"
           onClick={() => openDrawer('alerts')}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-amber-500/40 backdrop-blur-md text-xs font-medium text-amber-200 shadow-xl transition"
+          className="flex items-center gap-1 px-2.5 py-1.5 rounded-2xl bg-slate-900/92 hover:bg-slate-800 border border-amber-500/40 backdrop-blur-md text-xs font-medium text-amber-200 shadow-xl transition whitespace-nowrap"
         >
           <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
           <span className="hidden sm:inline">Cảnh báo</span>
-          <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-slate-950 font-extrabold">
+          <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-slate-950 font-extrabold text-[11px]">
             {activeAlertsCount}
           </span>
         </button>
@@ -254,49 +254,49 @@ export const FloatingHeader: React.FC = () => {
         <button
           type="button"
           onClick={() => openDrawer('timeseries')}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-sky-500 hover:from-emerald-400 hover:to-sky-400 text-slate-950 font-bold text-xs shadow-xl transition"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-sky-500 hover:from-emerald-400 hover:to-sky-400 text-slate-950 font-bold text-xs shadow-xl transition whitespace-nowrap"
         >
-          <BarChart3 className="w-4 h-4" />
+          <BarChart3 className="w-3.5 h-3.5" />
           <span>Phân tích & So sánh</span>
         </button>
 
         {/* Role Switcher (Guest / User / Admin) + Admin Control Center Trigger */}
-        <div className="flex items-center gap-1 px-2 py-1.5 rounded-2xl bg-slate-900/90 border border-slate-700/70 backdrop-blur-md text-xs shadow-xl">
+        <div className="flex items-center gap-1 px-2 py-1 rounded-2xl bg-slate-900/92 border border-slate-700/75 backdrop-blur-md text-xs shadow-xl whitespace-nowrap">
           {userRole === 'ADMIN' ? (
-            <ShieldCheck className="w-3.5 h-3.5 text-purple-400 ml-1" />
+            <ShieldCheck className="w-3.5 h-3.5 text-purple-400 ml-0.5" />
           ) : userRole === 'USER' ? (
-            <UserCheck className="w-3.5 h-3.5 text-sky-400 ml-1" />
+            <UserCheck className="w-3.5 h-3.5 text-sky-400 ml-0.5" />
           ) : (
-            <Activity className="w-3.5 h-3.5 text-slate-400 ml-1" />
+            <Activity className="w-3.5 h-3.5 text-slate-400 ml-0.5" />
           )}
           <select
             value={userRole}
             onChange={(e) => setUserRole(e.target.value as UserRole)}
             aria-label="Chọn vai trò người dùng"
-            className="bg-transparent text-xs font-semibold text-slate-200 focus:outline-none cursor-pointer pr-1"
+            className="bg-transparent text-xs font-semibold text-slate-200 focus:outline-none cursor-pointer pr-0.5"
           >
             <option value="GUEST" className="bg-slate-900 text-slate-200">
-              Vai trò: Khách
+              Khách
             </option>
             <option value="USER" className="bg-slate-900 text-sky-300">
-              Người dùng ĐK
+              Người dùng
             </option>
             <option value="ADMIN" className="bg-slate-900 text-purple-300">
-              Quản trị viên
+              Quản trị
             </option>
           </select>
 
           <button
             type="button"
             onClick={openAdminModal}
-            className={`ml-1 px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1 ${
+            className={`ml-0.5 px-2 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1 ${
               userRole === 'ADMIN'
                 ? 'bg-purple-500 text-slate-950 shadow'
                 : 'bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/40'
             }`}
             title="Mở Trung tâm Quản trị RBAC & Nhật ký kiểm toán (audit_logs)"
           >
-            <span>Quản trị RBAC</span>
+            <span>RBAC</span>
             <span className="px-1 rounded bg-slate-950/30 text-[10px]">
               {adminAuditLogs.length}
             </span>

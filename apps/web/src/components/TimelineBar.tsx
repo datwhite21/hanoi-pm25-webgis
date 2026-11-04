@@ -38,7 +38,7 @@ export const TimelineBar: React.FC = () => {
   const currentSlot = VERIFIED_TIMELINE_SLOTS[timelineIndex] ?? VERIFIED_TIMELINE_SLOTS[6];
 
   return (
-    <footer className="fixed bottom-3 left-14 right-3 z-20 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2 pointer-events-none">
+    <footer className="relative z-20 w-full shrink-0 pl-11 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2 pointer-events-none">
       {/* Timeline Player & Scrubber */}
       <div className="flex-1 flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl bg-slate-900/92 border border-slate-700/80 backdrop-blur-md shadow-2xl pointer-events-auto">
         {/* Controls */}

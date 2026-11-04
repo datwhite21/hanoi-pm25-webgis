@@ -43,7 +43,7 @@ export const PointInspectorCard: React.FC = () => {
   return (
     <section
       aria-label="Truy vấn không gian tại vị trí bất kỳ"
-      className="fixed left-3 bottom-24 md:bottom-auto md:top-20 z-20 w-[calc(100vw-1.5rem)] sm:w-96 rounded-2xl bg-slate-900/95 border border-sky-500/60 backdrop-blur-lg p-4 shadow-2xl text-xs max-h-[68vh] overflow-y-auto"
+      className="pointer-events-auto w-[calc(100vw-1.5rem)] sm:w-88 md:w-96 max-h-full overflow-y-auto rounded-2xl bg-slate-900/95 border border-sky-500/60 backdrop-blur-lg p-3.5 shadow-2xl text-xs"
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-2">

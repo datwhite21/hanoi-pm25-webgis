@@ -397,7 +397,7 @@ export const MapCanvas: React.FC = () => {
   }, [inspectedPoint]);
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-slate-950">
+    <div className="relative w-screen h-screen overflow-hidden bg-slate-950 z-0">
       <div ref={mapContainerRef} className="w-full h-full" />
 
       {/* Wind Streamline Particle Overlay (Meteorological aid for PM2.5 dispersion) */}
@@ -406,18 +406,6 @@ export const MapCanvas: React.FC = () => {
         windSpeedKmh={currentSlot.windSpeedKmh}
         windDirectionDeg={currentSlot.windDirectionDeg}
       />
-
-      {/* Scientific Honesty Badge for CAMS Model Grid */}
-      {showModelGrid && (
-        <div className="pointer-events-none fixed top-20 left-1/2 -translate-x-1/2 z-20 hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/85 border border-slate-700/70 backdrop-blur-md text-xs text-slate-300 shadow-lg">
-          <span className="inline-block w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
-          <span>
-            <strong>Lớp phủ nền:</strong> Mô hình CAMS Global (ECMWF) độ phân giải{' '}
-            <code className="text-sky-300">0.4° × 0.4° (~40 km)</code> — Điểm tròn là{' '}
-            <strong className="text-emerald-300">Trạm quan trắc mặt đất thực tế</strong>
-          </span>
-        </div>
-      )}
     </div>
   );
 };

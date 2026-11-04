@@ -96,7 +96,7 @@ export const LayerSidebar: React.FC = () => {
   } = useWebGisStore();
 
   return (
-    <aside className="fixed right-3 top-20 z-20 w-56 md:w-64 rounded-2xl bg-slate-900/90 border border-slate-700/70 backdrop-blur-md p-3 shadow-2xl text-xs max-h-[calc(100vh-11rem)] overflow-y-auto">
+    <aside className="pointer-events-auto w-56 md:w-60 max-h-full overflow-y-auto rounded-2xl bg-slate-900/92 border border-slate-700/75 backdrop-blur-md p-2.5 shadow-2xl text-xs">
       {/* Section 1: Primary Thematic Layer Selector */}
       <div className="flex items-center justify-between mb-2 px-1">
         <span className="font-bold uppercase tracking-wider text-[10px] text-slate-400 flex items-center gap-1.5">
