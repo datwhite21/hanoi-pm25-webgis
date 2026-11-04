@@ -6,8 +6,8 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    # Runs every 30 minutes to keep Supabase PostGIS updated even if free-tier backend sleeps
-    - cron: '*/30 * * * *'
+    # Runs every 5 minutes to keep Supabase PostGIS updated continuously
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 jobs:

@@ -322,8 +322,8 @@ export const useWebGisStore = create<WebGisState>((set, get) => ({
     try {
       const [liveStations, liveAlerts, liveSources] = await Promise.all([
         fetchLiveStationsFromApi(),
-        fetchLiveAlertsFromApi(),
-        fetchLiveDataSourcesFromApi(),
+        fetchLiveAlertsFromApi().catch(() => []),
+        fetchLiveDataSourcesFromApi().catch(() => []),
       ]);
 
       if (liveStations.length > 0) {

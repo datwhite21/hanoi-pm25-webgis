@@ -315,8 +315,8 @@ export const FloatingHeader: React.FC = () => {
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-slate-900/92 hover:bg-slate-800 border border-sky-500/40 backdrop-blur-md text-xs font-medium text-sky-200 shadow-xl transition whitespace-nowrap"
           title={
             lastSyncedAtLocal
-              ? `Đồng bộ PostGIS lần cuối lúc ${lastSyncedAtLocal}`
-              : 'Đồng bộ trực tiếp với cơ sở dữ liệu Supabase PostGIS'
+              ? `Tự động nạp lại dữ liệu mỗi 5 phút (Lần cuối: ${lastSyncedAtLocal})`
+              : 'Tự động nạp lại dữ liệu mỗi 5 phút từ PostGIS / WAQI Live'
           }
         >
           <RefreshCw
@@ -326,7 +326,7 @@ export const FloatingHeader: React.FC = () => {
           />
           <span className="hidden md:inline">
             {backendConnected
-              ? `PostGIS (${stations.length})`
+              ? `Auto 5p · Trạm (${stations.length})`
               : `Trạm HN (${stations.length})`}
           </span>
         </button>

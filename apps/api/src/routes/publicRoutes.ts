@@ -9,8 +9,27 @@ import {
 } from '@hanoi-pm25/shared';
 import { dbQuery, checkDbHealth } from '../db/pool.js';
 import { ApiError, sendSuccess } from '../middleware/errorHandler.js';
+import { runFullIngestionPipeline } from '../ingestion/ingestionOrchestrator.js';
 
 export const publicRouter = Router();
+
+let lastAutoIngestionMs = 0;
+let isBackgroundIngesting = false;
+const AUTO_INGEST_INTERVAL_MS = 5 * 60 * 1000;
+
+function triggerBackgroundIngestionIfStale(): void {
+  if (isBackgroundIngesting) return;
+  if (Date.now() - lastAutoIngestionMs < AUTO_INGEST_INTERVAL_MS) return;
+  isBackgroundIngesting = true;
+  lastAutoIngestionMs = Date.now();
+  runFullIngestionPipeline('SCHEDULED_CRON')
+    .catch(() => {
+      // Ignore background refresh error; existing PostGIS records remain available
+    })
+    .finally(() => {
+      isBackgroundIngesting = false;
+    });
+}
 
 // -----------------------------------------------------------------------------
 // 1. GET /api/health
@@ -34,6 +53,7 @@ publicRouter.get('/health', async (_req, res, next) => {
 // -----------------------------------------------------------------------------
 publicRouter.get('/v1/stations', async (req, res, next) => {
   try {
+    triggerBackgroundIngestionIfStale();
     const querySchema = z.object({
       status: z
         .enum(['FRESH', 'DELAYED', 'STALE', 'UNAVAILABLE'])

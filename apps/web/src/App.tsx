@@ -16,7 +16,11 @@ export const App: React.FC = () => {
   const showModelGrid = useWebGisStore((s) => s.showModelGrid);
 
   useEffect(() => {
-    syncWithPostgisBackend();
+    void syncWithPostgisBackend();
+    const autoReloadTimer = window.setInterval(() => {
+      void syncWithPostgisBackend();
+    }, 5 * 60 * 1000);
+    return () => window.clearInterval(autoReloadTimer);
   }, [syncWithPostgisBackend]);
 
   return (

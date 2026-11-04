@@ -155,6 +155,12 @@ export const StationPopupCard: React.FC = () => {
             </span>
             <div className="mt-1.5 text-[11px] text-slate-200 font-semibold">
               VN_AQI: <strong>{selectedStation.computedVnAqi ?? '--'}</strong>
+              {selectedStation.rawAqiSubindex !== null && (
+                <span className="text-amber-300">
+                  {' '}
+                  · US-AQI (WAQI): <strong>{selectedStation.rawAqiSubindex}</strong>
+                </span>
+              )}
               {selectedStation.latestPm10UgM3 !== null && (
                 <span> · PM10: {selectedStation.latestPm10UgM3} µg/m³</span>
               )}
