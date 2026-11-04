@@ -47,7 +47,51 @@ export async function runWaqiIngestion(
     throw new Error(`WAQI returned unexpected status: ${json.status}`);
   }
 
-  const items = json.data;
+  const items: WaqiBoundsStation[] = [...json.data];
+  const seenUids = new Set<number>(items.map((i) => i.uid));
+
+  // Also query WAQI search endpoint for Hanoi so all urban sensor stations are included
+  try {
+    const searchUrl = `https://api.waqi.info/search/?keyword=hanoi&token=${encodeURIComponent(
+      env.WAQI_API_TOKEN
+    )}`;
+    const searchRes = await fetch(searchUrl, {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (searchRes.ok) {
+      const searchJson = (await searchRes.json()) as {
+        status: string;
+        data?: Array<{
+          uid: number;
+          aqi: string;
+          time?: { stime?: string };
+          station?: { name?: string; geo?: [number, number] };
+        }>;
+      };
+      if (searchJson.status === 'ok' && Array.isArray(searchJson.data)) {
+        for (const sItem of searchJson.data) {
+          if (seenUids.has(sItem.uid)) continue;
+          const geo = sItem.station?.geo;
+          if (!Array.isArray(geo) || geo.length < 2) continue;
+          seenUids.add(sItem.uid);
+          items.push({
+            uid: sItem.uid,
+            lat: Number(geo[0]),
+            lon: Number(geo[1]),
+            aqi: String(sItem.aqi ?? '-'),
+            station: {
+              name: sItem.station?.name || `WAQI Station ${sItem.uid}`,
+              time: sItem.time?.stime || new Date().toISOString(),
+            },
+          });
+        }
+      }
+    }
+  } catch {
+    // Proceed with bounds items if search endpoint fails
+  }
+
   let recordsFetched = items.length;
   let recordsInserted = 0;
   let recordsFlaggedQc = 0;

@@ -32,11 +32,17 @@ export const PointInspectorCard: React.FC = () => {
   const modelClass = modelCell ? classifyPm25Level(modelCell.pm25UgM3) : null;
 
   const QUICK_AREAS = [
+    { code: 'HN-TH', nameVi: 'Tây Hồ (2 trạm)' },
+    { code: 'HN-HK', nameVi: 'Hoàn Kiếm (3 trạm)' },
+    { code: 'HN-DD', nameVi: 'Đống Đa' },
+    { code: 'HN-BD', nameVi: 'Ba Đình' },
+    { code: 'HN-LB', nameVi: 'Long Biên' },
+    { code: 'HN-CG', nameVi: 'Cầu Giấy' },
     { code: 'HN-HBT', nameVi: 'Hai Bà Trưng' },
     { code: 'HN-TX', nameVi: 'Thanh Xuân' },
-    { code: 'HN-GL', nameVi: 'Gia Lâm' },
-    { code: 'HN-TH', nameVi: 'Tây Hồ' },
     { code: 'HN-HD', nameVi: 'Hà Đông' },
+    { code: 'HN-HM', nameVi: 'Hoàng Mai (2 trạm)' },
+    { code: 'HN-GL', nameVi: 'Gia Lâm' },
     { code: 'HN-SS', nameVi: 'Sóc Sơn (0 trạm)' },
   ];
 

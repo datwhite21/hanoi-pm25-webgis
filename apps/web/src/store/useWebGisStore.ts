@@ -266,128 +266,159 @@ export const useWebGisStore = create<WebGisState>((set, get) => ({
   },
 
   inspectAdministrativeArea: async (areaCode: string) => {
+    const DISTRICT_META: Record<
+      string,
+      { nameVi: string; keyword: string; areaSqKm: number }
+    > = {
+      'HN-HBT': {
+        nameVi: 'Quận Hai Bà Trưng',
+        keyword: 'hai bà trưng',
+        areaSqKm: 10.26,
+      },
+      'HN-TX': {
+        nameVi: 'Quận Thanh Xuân',
+        keyword: 'thanh xuân',
+        areaSqKm: 9.08,
+      },
+      'HN-GL': {
+        nameVi: 'Huyện Gia Lâm',
+        keyword: 'gia lâm',
+        areaSqKm: 116.6,
+      },
+      'HN-TH': {
+        nameVi: 'Quận Tây Hồ',
+        keyword: 'tây hồ',
+        areaSqKm: 24.38,
+      },
+      'HN-HD': {
+        nameVi: 'Quận Hà Đông',
+        keyword: 'hà đông',
+        areaSqKm: 49.64,
+      },
+      'HN-SS': {
+        nameVi: 'Huyện Sóc Sơn',
+        keyword: 'sóc sơn',
+        areaSqKm: 305.5,
+      },
+      'HN-LB': {
+        nameVi: 'Quận Long Biên',
+        keyword: 'long biên',
+        areaSqKm: 60.38,
+      },
+      'HN-CG': {
+        nameVi: 'Quận Cầu Giấy',
+        keyword: 'cầu giấy',
+        areaSqKm: 12.44,
+      },
+      'HN-BTL': {
+        nameVi: 'Quận Bắc Từ Liêm',
+        keyword: 'bắc từ liêm',
+        areaSqKm: 45.24,
+      },
+      'HN-HK': {
+        nameVi: 'Quận Hoàn Kiếm',
+        keyword: 'hoàn kiếm',
+        areaSqKm: 5.29,
+      },
+      'HN-DD': {
+        nameVi: 'Quận Đống Đa',
+        keyword: 'đống đa',
+        areaSqKm: 9.95,
+      },
+      'HN-BD': {
+        nameVi: 'Quận Ba Đình',
+        keyword: 'ba đình',
+        areaSqKm: 9.21,
+      },
+      'HN-HM': {
+        nameVi: 'Quận Hoàng Mai',
+        keyword: 'hoàng mai',
+        areaSqKm: 40.32,
+      },
+      'HN-TT': {
+        nameVi: 'Huyện Thanh Trì',
+        keyword: 'thanh trì',
+        areaSqKm: 63.49,
+      },
+    };
+
     try {
       const stats = await fetchLiveAreaStatisticsFromApi(areaCode);
-      set({
-        selectedAreaStats: stats,
-        backendConnected: true,
-      });
+      // Use PostGIS stats only if it actually found stations for this area
+      if (stats.observedStatistics.totalStationsInArea > 0) {
+        set({
+          selectedAreaStats: stats,
+          backendConnected: true,
+        });
+        return;
+      }
     } catch {
-      const DISTRICT_META: Record<
-        string,
-        { nameVi: string; keyword: string; areaSqKm: number }
-      > = {
-        'HN-HBT': {
-          nameVi: 'Quận Hai Bà Trưng',
-          keyword: 'hai bà trưng',
-          areaSqKm: 10.26,
-        },
-        'HN-TX': {
-          nameVi: 'Quận Thanh Xuân',
-          keyword: 'thanh xuân',
-          areaSqKm: 9.08,
-        },
-        'HN-GL': {
-          nameVi: 'Huyện Gia Lâm',
-          keyword: 'gia lâm',
-          areaSqKm: 116.6,
-        },
-        'HN-TH': {
-          nameVi: 'Quận Tây Hồ',
-          keyword: 'tây hồ',
-          areaSqKm: 24.38,
-        },
-        'HN-HD': {
-          nameVi: 'Quận Hà Đông',
-          keyword: 'hà đông',
-          areaSqKm: 49.64,
-        },
-        'HN-SS': {
-          nameVi: 'Huyện Sóc Sơn',
-          keyword: 'sóc sơn',
-          areaSqKm: 305.5,
-        },
-        'HN-LB': {
-          nameVi: 'Quận Long Biên',
-          keyword: 'long biên',
-          areaSqKm: 60.38,
-        },
-        'HN-CG': {
-          nameVi: 'Quận Cầu Giấy',
-          keyword: 'cầu giấy',
-          areaSqKm: 12.44,
-        },
-        'HN-BTL': {
-          nameVi: 'Quận Bắc Từ Liêm',
-          keyword: 'bắc từ liêm',
-          areaSqKm: 45.24,
-        },
-      };
-
-      const meta = DISTRICT_META[areaCode] ?? {
-        nameVi: areaCode,
-        keyword: areaCode.toLowerCase(),
-        areaSqKm: 28.5,
-      };
-
-      const currentStations = get().stations;
-      const areaStations = currentStations.filter((s) =>
-        s.districtNameVi.toLowerCase().includes(meta.keyword)
-      );
-      const active = areaStations.filter(
-        (s) =>
-          (s.freshnessStatus === 'FRESH' || s.freshnessStatus === 'DELAYED') &&
-          s.latestPm25UgM3 !== null
-      );
-      const avg =
-        active.length > 0
-          ? Number(
-              (
-                active.reduce((sum, s) => sum + (s.latestPm25UgM3 ?? 0), 0) /
-                active.length
-              ).toFixed(2)
-            )
-          : null;
-
-      set({
-        selectedAreaStats: {
-          area: {
-            code: areaCode,
-            nameVi: meta.nameVi,
-            areaSqKm: meta.areaSqKm,
-          },
-          observedStatistics: {
-            hasActiveStation: active.length > 0,
-            totalStationsInArea: areaStations.length,
-            activeStationsInArea: active.length,
-            avgObservedPm25UgM3: avg,
-            vnAqi: avg !== null ? calculateVnAqiFromPm25(avg) : null,
-            scientificNoteVi:
-              active.length > 0
-                ? `Khu vực ${meta.nameVi} có ${active.length}/${areaStations.length} trạm đang phát dữ liệu thực tế (${active.map((st) => st.name).join(', ')}).`
-                : `Khu vực ${meta.nameVi} hiện không có trạm quan trắc mặt đất đang phát tín hiệu thời gian thực. Hệ thống không nội suy giả cấp xã/phường; vui lòng tham khảo ô lưới CAMS 0.4° (~40 km).`,
-            stations: areaStations.map((s) => ({
-              externalStationId: s.externalStationId,
-              name: s.name,
-              freshnessStatus: s.freshnessStatus,
-              pm25UgM3: s.latestPm25UgM3,
-              valueOrigin: s.valueOrigin,
-            })),
-          },
-          modeledBackground: {
-            dataOrigin: 'NUMERICAL_MODEL',
-            spatialResolutionDeg: 0.4,
-            intersectingCamsCells: [
-              {
-                cellCode: VERIFIED_CAMS_MODEL_GRID_CELLS[0].cellCode,
-                labelVi: VERIFIED_CAMS_MODEL_GRID_CELLS[0].labelVi,
-                modelPm25UgM3: VERIFIED_CAMS_MODEL_GRID_CELLS[0].pm25UgM3,
-              },
-            ],
-          },
-        },
-      });
+      // Fallback to local spatial aggregation below
     }
+
+    const meta = DISTRICT_META[areaCode] ?? {
+      nameVi: areaCode,
+      keyword: areaCode.toLowerCase(),
+      areaSqKm: 28.5,
+    };
+
+    const currentStations = get().stations;
+    const areaStations = currentStations.filter((s) =>
+      s.districtNameVi.toLowerCase().includes(meta.keyword)
+    );
+    const active = areaStations.filter(
+      (s) =>
+        (s.freshnessStatus === 'FRESH' || s.freshnessStatus === 'DELAYED') &&
+        s.latestPm25UgM3 !== null
+    );
+    const avg =
+      active.length > 0
+        ? Number(
+            (
+              active.reduce((sum, s) => sum + (s.latestPm25UgM3 ?? 0), 0) /
+              active.length
+            ).toFixed(2)
+          )
+        : null;
+
+    set({
+      selectedAreaStats: {
+        area: {
+          code: areaCode,
+          nameVi: meta.nameVi,
+          areaSqKm: meta.areaSqKm,
+        },
+        observedStatistics: {
+          hasActiveStation: active.length > 0,
+          totalStationsInArea: areaStations.length,
+          activeStationsInArea: active.length,
+          avgObservedPm25UgM3: avg,
+          vnAqi: avg !== null ? calculateVnAqiFromPm25(avg) : null,
+          scientificNoteVi:
+            active.length > 0
+              ? `Khu vực ${meta.nameVi} có ${active.length}/${areaStations.length} trạm đang phát dữ liệu thực tế (${active.map((st) => st.name).join(', ')}).`
+              : `Khu vực ${meta.nameVi} hiện không có trạm quan trắc mặt đất đang phát tín hiệu thời gian thực. Hệ thống không nội suy giả cấp xã/phường; vui lòng tham khảo ô lưới CAMS 0.4° (~40 km).`,
+          stations: areaStations.map((s) => ({
+            externalStationId: s.externalStationId,
+            name: s.name,
+            freshnessStatus: s.freshnessStatus,
+            pm25UgM3: s.latestPm25UgM3,
+            valueOrigin: s.valueOrigin,
+          })),
+        },
+        modeledBackground: {
+          dataOrigin: 'NUMERICAL_MODEL',
+          spatialResolutionDeg: 0.4,
+          intersectingCamsCells: [
+            {
+              cellCode: VERIFIED_CAMS_MODEL_GRID_CELLS[0].cellCode,
+              labelVi: VERIFIED_CAMS_MODEL_GRID_CELLS[0].labelVi,
+              modelPm25UgM3: VERIFIED_CAMS_MODEL_GRID_CELLS[0].pm25UgM3,
+            },
+          ],
+        },
+      },
+    });
   },
 
   clearInspection: () =>

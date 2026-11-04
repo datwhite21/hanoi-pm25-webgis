@@ -62,98 +62,200 @@ function formatUtcToVietnamTime(utcStr: string | null | undefined): string | nul
   });
 }
 
+const COLOCATED_OPENAQ_TO_WAQI_UID: Record<string, string> = {
+  '4946812': '-477292', // Công viên Nhân Chính - Khuất Duy Tiến
+  '4946813': '-476341', // Số 1 đường Giải Phóng - ĐHBK
+  '4946811': '1583',    // 556 Nguyễn Văn Cừ - Long Biên
+  '2161292': '13026',   // Số 46 Lưu Quang Vũ - Cầu Giấy
+  '2161306': '13426',   // Minh Khai - Bắc Từ Liêm
+};
+
+function inferHanoiDistrictVi(lat: number, lon: number, rawName: string): {
+  wardVi: string;
+  districtVi: string;
+} {
+  const lower = rawName.toLowerCase();
+  if (lower.includes('tay ho') || lower.includes('tây hồ')) {
+    return { wardVi: 'Phường Quảng An', districtVi: 'Quận Tây Hồ' };
+  }
+  if (lower.includes('hoan kiem') || lower.includes('hoàn kiếm')) {
+    return { wardVi: 'Phường Hàng Trống', districtVi: 'Quận Hoàn Kiếm' };
+  }
+  if (lower.includes('ba dinh') || lower.includes('ba đình')) {
+    return { wardVi: 'Phường Điện Biên', districtVi: 'Quận Ba Đình' };
+  }
+  if (lower.includes('dong da') || lower.includes('đống đa')) {
+    return { wardVi: 'Phường Láng Thượng', districtVi: 'Quận Đống Đa' };
+  }
+  if (lower.includes('cau giay') || lower.includes('cầu giấy')) {
+    return { wardVi: 'Phường Trung Hòa', districtVi: 'Quận Cầu Giấy' };
+  }
+  if (lower.includes('thanh xuan') || lower.includes('thanh xuân')) {
+    return { wardVi: 'Phường Nhân Chính', districtVi: 'Quận Thanh Xuân' };
+  }
+  if (lower.includes('ha dong') || lower.includes('hà đông')) {
+    return { wardVi: 'Phường Mộ Lao', districtVi: 'Quận Hà Đông' };
+  }
+  if (lower.includes('hoang mai') || lower.includes('hoàng mai')) {
+    return { wardVi: 'Phường Hoàng Liệt', districtVi: 'Quận Hoàng Mai' };
+  }
+  if (lower.includes('long bien') || lower.includes('long biên')) {
+    return { wardVi: 'Phường Gia Thụy', districtVi: 'Quận Long Biên' };
+  }
+  if (lower.includes('tu liem') || lower.includes('từ liêm')) {
+    return { wardVi: 'Phường Xuân Tảo', districtVi: 'Quận Bắc Từ Liêm' };
+  }
+  if (lower.includes('thanh tri') || lower.includes('thanh trì')) {
+    return { wardVi: 'Xã Tứ Hiệp', districtVi: 'Huyện Thanh Trì' };
+  }
+  if (lat > 21.055 && lon >= 105.80 && lon <= 105.85) {
+    return { wardVi: 'Khu vực Hồ Tây', districtVi: 'Quận Tây Hồ' };
+  }
+  if (lon > 105.865) {
+    return { wardVi: 'Khu vực phía Đông', districtVi: 'Quận Long Biên' };
+  }
+  return { wardVi: 'Khu vực Nội thành', districtVi: 'Thành phố Hà Nội' };
+}
+
 export async function fetchLiveStationsFromApi(): Promise<MonitoringStation[]> {
+  const fallbackHistory = VERIFIED_HANOI_STATIONS[0].hourlyHistory;
+  let mergedStations: MonitoringStation[] = VERIFIED_HANOI_STATIONS.map((s) => ({
+    ...s,
+  }));
+  let apiSucceeded = false;
+
+  // 1. Try PostGIS Backend API (/api/v1/stations) if available
   try {
     const res = await fetch(`${API_BASE}/v1/stations`, {
       headers: { Accept: 'application/json' },
     });
-    if (!res.ok) {
-      throw new Error(`GET /v1/stations failed with status ${res.status}`);
+    if (res.ok) {
+      const json = await res.json();
+      const rows = (json.data ?? []) as Array<{
+        id: string;
+        externalStationId: string;
+        name: string;
+        providerName: string;
+        sourceCode: 'OPENAQ_V3' | 'WAQI';
+        equipmentGrade: 'REFERENCE_GRADE' | 'LOW_COST_SENSOR' | 'MODEL_GRID';
+        isReferenceMonitor: boolean;
+        coordinates: { latitude: number; longitude: number };
+        administrativeArea: {
+          code: string | null;
+          nameVi: string | null;
+          wardNameVi: string | null;
+        };
+        freshnessStatus: DataFreshnessStatus;
+        lastObservedAtUtc: string | null;
+        latestObservation: {
+          pm25UgM3: number;
+          pm10UgM3: number | null;
+          vnAqi: number | null;
+          rawUsAqiSubindex: number | null;
+          valueOrigin: 'DIRECT_CONCENTRATION' | 'DERIVED_FROM_US_AQI';
+          qualityFlag: QualityFlag;
+          measuredAtUtc: string;
+        } | null;
+      }>;
+
+      if (rows.length > 0) {
+        apiSucceeded = true;
+        for (const r of rows) {
+          const cleanExtId = r.externalStationId.replace(/^WAQI_/, '');
+          const matchIdx = mergedStations.findIndex(
+            (s) =>
+              s.externalStationId === r.externalStationId ||
+              s.externalStationId === cleanExtId ||
+              COLOCATED_OPENAQ_TO_WAQI_UID[s.externalStationId] === cleanExtId ||
+              calculateHaversineDistanceKm(
+                s.latitude,
+                s.longitude,
+                r.coordinates.latitude,
+                r.coordinates.longitude
+              ) < 0.35
+          );
+
+          const pm25 = r.latestObservation?.pm25UgM3 ?? null;
+          const pm10 =
+            r.latestObservation?.pm10UgM3 ??
+            (pm25 !== null ? Number((pm25 * 1.25).toFixed(1)) : null);
+          const measuredAtUtc =
+            r.latestObservation?.measuredAtUtc ?? r.lastObservedAtUtc ?? null;
+          const lagMinutes = measuredAtUtc
+            ? Math.max(0, Math.round((Date.now() - Date.parse(measuredAtUtc)) / 60000))
+            : null;
+          const formattedLocal = formatUtcToVietnamTime(measuredAtUtc);
+
+          if (matchIdx >= 0) {
+            const existing = mergedStations[matchIdx];
+            // Only overwrite if PostGIS has a valid measurement or existing is unavailable
+            if (pm25 !== null || existing.latestPm25UgM3 === null) {
+              mergedStations[matchIdx] = {
+                ...existing,
+                freshnessStatus: r.freshnessStatus,
+                lagMinutes: lagMinutes ?? existing.lagMinutes,
+                latestPm25UgM3: pm25 ?? existing.latestPm25UgM3,
+                latestPm10UgM3: pm10 ?? existing.latestPm10UgM3,
+                rawAqiSubindex:
+                  r.latestObservation?.rawUsAqiSubindex ?? existing.rawAqiSubindex,
+                computedVnAqi:
+                  r.latestObservation?.vnAqi ??
+                  (pm25 !== null ? calculateVnAqiFromPm25(pm25) : existing.computedVnAqi),
+                measuredAtUtc: measuredAtUtc ?? existing.measuredAtUtc,
+                measuredAtLocal: formattedLocal
+                  ? `${formattedLocal} (GMT+7)`
+                  : existing.measuredAtLocal,
+                fetchedAtUtc: new Date().toISOString(),
+              };
+            }
+          } else {
+            mergedStations.push({
+              id: `postgis-${r.externalStationId}`,
+              externalStationId: cleanExtId,
+              name: r.name,
+              providerName: r.providerName,
+              sourceCode: r.sourceCode === 'OPENAQ_V3' ? 'OPENAQ_V3' : 'WAQI',
+              equipmentGrade:
+                r.equipmentGrade === 'REFERENCE_GRADE'
+                  ? 'REFERENCE_GRADE'
+                  : 'LOW_COST_SENSOR',
+              isReferenceMonitor: r.isReferenceMonitor,
+              latitude: r.coordinates.latitude,
+              longitude: r.coordinates.longitude,
+              administrativeAreaNameVi:
+                r.administrativeArea.wardNameVi ||
+                r.administrativeArea.nameVi ||
+                'Hà Nội',
+              districtNameVi: r.administrativeArea.nameVi || 'Thành phố Hà Nội',
+              isWithinHanoi: true,
+              freshnessStatus: r.freshnessStatus,
+              lagMinutes,
+              latestPm25UgM3: pm25,
+              latestPm10UgM3: pm10,
+              rawAqiSubindex: r.latestObservation?.rawUsAqiSubindex ?? null,
+              computedVnAqi:
+                r.latestObservation?.vnAqi ??
+                (pm25 !== null ? calculateVnAqiFromPm25(pm25) : null),
+              valueOrigin:
+                r.latestObservation?.valueOrigin ?? 'DERIVED_FROM_US_AQI',
+              qualityFlag: r.latestObservation?.qualityFlag ?? 'VALID',
+              measuredAtUtc,
+              measuredAtLocal: formattedLocal
+                ? `${formattedLocal} (GMT+7)`
+                : null,
+              fetchedAtUtc: new Date().toISOString(),
+              hourlyHistory: fallbackHistory,
+            });
+          }
+        }
+      }
     }
-    const json = await res.json();
-    const rows = (json.data ?? []) as Array<{
-      id: string;
-      externalStationId: string;
-      name: string;
-      providerName: string;
-      sourceCode: 'OPENAQ_V3' | 'WAQI';
-      equipmentGrade: 'REFERENCE_GRADE' | 'LOW_COST_SENSOR' | 'MODEL_GRID';
-      isReferenceMonitor: boolean;
-      coordinates: { latitude: number; longitude: number };
-      administrativeArea: {
-        code: string | null;
-        nameVi: string | null;
-        wardNameVi: string | null;
-      };
-      freshnessStatus: DataFreshnessStatus;
-      lastObservedAtUtc: string | null;
-      latestObservation: {
-        pm25UgM3: number;
-        pm10UgM3: number | null;
-        vnAqi: number | null;
-        rawUsAqiSubindex: number | null;
-        valueOrigin: 'DIRECT_CONCENTRATION' | 'DERIVED_FROM_US_AQI';
-        qualityFlag: QualityFlag;
-        measuredAtUtc: string;
-      } | null;
-    }>;
-
-    const fallbackHistory = VERIFIED_HANOI_STATIONS[0].hourlyHistory;
-
-    return rows.map((r) => {
-      const matchingSnapshot = VERIFIED_HANOI_STATIONS.find(
-        (s) => s.externalStationId === r.externalStationId
-      );
-      const pm25 = r.latestObservation?.pm25UgM3 ?? null;
-      const pm10 =
-        r.latestObservation?.pm10UgM3 ??
-        (pm25 !== null ? Number((pm25 * 1.25).toFixed(1)) : null);
-      const measuredAtUtc =
-        r.latestObservation?.measuredAtUtc ?? r.lastObservedAtUtc ?? null;
-      const lagMinutes = measuredAtUtc
-        ? Math.max(0, Math.round((Date.now() - Date.parse(measuredAtUtc)) / 60000))
-        : null;
-
-      return {
-        id: matchingSnapshot?.id ?? `postgis-${r.externalStationId}`,
-        externalStationId: r.externalStationId,
-        name: r.name,
-        providerName: r.providerName,
-        sourceCode: r.sourceCode === 'OPENAQ_V3' ? 'OPENAQ_V3' : 'WAQI',
-        equipmentGrade:
-          r.equipmentGrade === 'REFERENCE_GRADE'
-            ? 'REFERENCE_GRADE'
-            : 'LOW_COST_SENSOR',
-        isReferenceMonitor: r.isReferenceMonitor,
-        latitude: r.coordinates.latitude,
-        longitude: r.coordinates.longitude,
-        administrativeAreaNameVi:
-          r.administrativeArea.wardNameVi ||
-          r.administrativeArea.nameVi ||
-          'Hà Nội',
-        districtNameVi: r.administrativeArea.nameVi || 'Thành phố Hà Nội',
-        isWithinHanoi: true,
-        freshnessStatus: r.freshnessStatus,
-        lagMinutes,
-        latestPm25UgM3: pm25,
-        latestPm10UgM3: pm10,
-        rawAqiSubindex: r.latestObservation?.rawUsAqiSubindex ?? null,
-        computedVnAqi:
-          r.latestObservation?.vnAqi ??
-          (pm25 !== null ? calculateVnAqiFromPm25(pm25) : null),
-        valueOrigin: r.latestObservation?.valueOrigin ?? 'DIRECT_CONCENTRATION',
-        qualityFlag: r.latestObservation?.qualityFlag ?? 'VALID',
-        measuredAtUtc,
-        measuredAtLocal:
-          formatUtcToVietnamTime(measuredAtUtc) ??
-          matchingSnapshot?.measuredAtLocal ??
-          null,
-        fetchedAtUtc: new Date().toISOString(),
-        hourlyHistory: matchingSnapshot?.hourlyHistory ?? fallbackHistory,
-      };
-    });
   } catch {
-    // Direct live WAQI v2 bounds fallback every 5 minutes when frontend runs standalone on Vercel
+    // Ignore PostGIS fetch error and proceed to live WAQI v2 bounds overlay
+  }
+
+  // 2. Always overlay real-time WAQI v2 map bounds so all live WAQI stations in Hanoi are synced
+  try {
     const fallbackToken =
       (typeof import.meta !== 'undefined' &&
         (import.meta as { env?: Record<string, string> }).env
@@ -165,96 +267,215 @@ export async function fetchLiveStationsFromApi(): Promise<MonitoringStation[]> {
         fallbackToken
       )}`
     );
-    if (!waqiRes.ok) {
-      throw new Error('Both PostGIS API and WAQI live feed unavailable');
-    }
-    const waqiJson = await waqiRes.json();
-    if (waqiJson?.status !== 'ok' || !Array.isArray(waqiJson?.data)) {
-      throw new Error('WAQI v2 map bounds returned non-ok status');
-    }
+    if (waqiRes.ok) {
+      const waqiJson = await waqiRes.json();
+      if (waqiJson?.status === 'ok' && Array.isArray(waqiJson?.data)) {
+        const liveWaqiList = (waqiJson.data ?? []) as Array<{
+          uid: number;
+          lat: number;
+          lon: number;
+          aqi: string;
+          station?: { name?: string; time?: string };
+        }>;
 
-    const liveWaqiList = (waqiJson.data ?? []) as Array<{
-      uid: number;
-      lat: number;
-      lon: number;
-      aqi: string;
-      station?: { name?: string; time?: string };
-    }>;
+        const nowMs = Date.now();
+        const nowIso = new Date(nowMs).toISOString();
+        const claimedUids = new Set<number>();
 
-    const nowMs = Date.now();
-    const nowIso = new Date(nowMs).toISOString();
+        mergedStations = mergedStations.map((st) => {
+          const targetWaqiUid =
+            COLOCATED_OPENAQ_TO_WAQI_UID[st.externalStationId] ??
+            st.externalStationId.replace(/^WAQI_/, '');
 
-    return VERIFIED_HANOI_STATIONS.map((st) => {
-      // Find closest live WAQI station within 2.2 km
-      let bestMatch: (typeof liveWaqiList)[number] | null = null;
-      let bestDistKm = 2.2;
-      for (const w of liveWaqiList) {
-        const dKm = calculateHaversineDistanceKm(
-          st.latitude,
-          st.longitude,
-          w.lat,
-          w.lon
-        );
-        if (dKm < bestDistKm) {
-          bestDistKm = dKm;
-          bestMatch = w;
+          // Match first by exact WAQI uid
+          let bestMatch =
+            liveWaqiList.find((w) => String(w.uid) === targetWaqiUid) ?? null;
+
+          // Otherwise match by tight co-location (< 0.35 km)
+          if (!bestMatch) {
+            let bestDistKm = 0.35;
+            for (const w of liveWaqiList) {
+              if (claimedUids.has(w.uid)) continue;
+              const dKm = calculateHaversineDistanceKm(
+                st.latitude,
+                st.longitude,
+                w.lat,
+                w.lon
+              );
+              if (dKm < bestDistKm) {
+                bestDistKm = dKm;
+                bestMatch = w;
+              }
+            }
+          }
+
+          if (!bestMatch) {
+            return st;
+          }
+
+          claimedUids.add(bestMatch.uid);
+
+          const rawUsAqi = Number(bestMatch.aqi);
+          const stationTimeStr = bestMatch.station?.time;
+          const parsedTimeMs = stationTimeStr ? Date.parse(stationTimeStr) : NaN;
+          const validMeasuredUtc = !Number.isNaN(parsedTimeMs)
+            ? new Date(parsedTimeMs).toISOString()
+            : st.measuredAtUtc ?? nowIso;
+          const lagMinutes = !Number.isNaN(parsedTimeMs)
+            ? Math.max(1, Math.round((nowMs - parsedTimeMs) / 60000))
+            : st.lagMinutes ?? 8;
+          const formattedLocal =
+            formatUtcToVietnamTime(validMeasuredUtc) ?? st.measuredAtLocal;
+
+          // If WAQI temporarily reports "-" for a station, preserve its recent valid measurement if it has one
+          if (!Number.isFinite(rawUsAqi) || rawUsAqi <= 0) {
+            if (st.latestPm25UgM3 !== null && st.freshnessStatus !== 'STALE') {
+              return {
+                ...st,
+                freshnessStatus: 'DELAYED',
+                fetchedAtUtc: nowIso,
+              };
+            }
+            return {
+              ...st,
+              freshnessStatus: 'UNAVAILABLE',
+              lagMinutes,
+              latestPm25UgM3: null,
+              rawAqiSubindex: null,
+              computedVnAqi: null,
+              measuredAtUtc: validMeasuredUtc,
+              measuredAtLocal: formattedLocal
+                ? formattedLocal.includes('GMT+7')
+                  ? formattedLocal
+                  : `${formattedLocal} (GMT+7)`
+                : st.measuredAtLocal,
+              fetchedAtUtc: nowIso,
+            };
+          }
+
+          const approxPm25 = convertUsAqiToApproximatePm25UgM3(rawUsAqi);
+          const vnAqi = calculateVnAqiFromPm25(approxPm25);
+          const freshnessStatus: DataFreshnessStatus =
+            lagMinutes <= 120
+              ? 'FRESH'
+              : lagMinutes <= 240
+                ? 'DELAYED'
+                : 'STALE';
+
+          return {
+            ...st,
+            freshnessStatus,
+            lagMinutes,
+            latestPm25UgM3: approxPm25,
+            latestPm10UgM3: Number((approxPm25 * 1.18).toFixed(1)),
+            rawAqiSubindex: rawUsAqi,
+            computedVnAqi: vnAqi,
+            measuredAtUtc: validMeasuredUtc,
+            measuredAtLocal: formattedLocal
+              ? formattedLocal.includes('GMT+7')
+                ? formattedLocal
+                : `${formattedLocal} (GMT+7)`
+              : st.measuredAtLocal,
+            fetchedAtUtc: nowIso,
+          };
+        });
+
+        // 3. Dynamically append any new WAQI station within Hanoi that isn't already in our catalog
+        for (const w of liveWaqiList) {
+          if (claimedUids.has(w.uid)) continue;
+          const rawName = w.station?.name || `Trạm WAQI #${w.uid}`;
+          const lower = rawName.toLowerCase();
+          const isOutsideHanoiByName =
+            lower.includes('viet tri') ||
+            lower.includes('việt trì') ||
+            lower.includes('phú thọ') ||
+            lower.includes('phu tho') ||
+            lower.includes('bắc ninh') ||
+            lower.includes('từ sơn') ||
+            lower.includes('hưng yên') ||
+            lower.includes('vĩnh phúc') ||
+            lower.includes('hải dương');
+
+          const isInsideHanoiCore =
+            w.lat >= 20.84 &&
+            w.lat <= 21.24 &&
+            w.lon >= 105.62 &&
+            w.lon <= 105.97 &&
+            !isOutsideHanoiByName;
+
+          if (!isInsideHanoiCore) continue;
+
+          const tooCloseToExisting = mergedStations.some(
+            (s) =>
+              calculateHaversineDistanceKm(s.latitude, s.longitude, w.lat, w.lon) <
+              0.35
+          );
+          if (tooCloseToExisting) continue;
+
+          const rawUsAqi = Number(w.aqi);
+          const hasValidAqi = Number.isFinite(rawUsAqi) && rawUsAqi > 0;
+          const approxPm25 = hasValidAqi
+            ? convertUsAqiToApproximatePm25UgM3(rawUsAqi)
+            : null;
+          const stationTimeStr = w.station?.time;
+          const parsedTimeMs = stationTimeStr ? Date.parse(stationTimeStr) : NaN;
+          const validMeasuredUtc = !Number.isNaN(parsedTimeMs)
+            ? new Date(parsedTimeMs).toISOString()
+            : nowIso;
+          const lagMinutes = !Number.isNaN(parsedTimeMs)
+            ? Math.max(1, Math.round((nowMs - parsedTimeMs) / 60000))
+            : 10;
+          const formattedLocal = formatUtcToVietnamTime(validMeasuredUtc);
+          const { wardVi, districtVi } = inferHanoiDistrictVi(
+            w.lat,
+            w.lon,
+            rawName
+          );
+
+          mergedStations.push({
+            id: `waqi-${w.uid}`,
+            externalStationId: String(w.uid),
+            name: rawName.replace(/,\s*Vietnam$/i, ''),
+            providerName: 'WAQI Community Network',
+            sourceCode: 'WAQI',
+            equipmentGrade: 'LOW_COST_SENSOR',
+            isReferenceMonitor: false,
+            latitude: w.lat,
+            longitude: w.lon,
+            administrativeAreaNameVi: wardVi,
+            districtNameVi: districtVi,
+            isWithinHanoi: true,
+            freshnessStatus: hasValidAqi ? 'FRESH' : 'UNAVAILABLE',
+            lagMinutes,
+            latestPm25UgM3: approxPm25,
+            latestPm10UgM3:
+              approxPm25 !== null ? Number((approxPm25 * 1.18).toFixed(1)) : null,
+            rawAqiSubindex: hasValidAqi ? rawUsAqi : null,
+            computedVnAqi:
+              approxPm25 !== null ? calculateVnAqiFromPm25(approxPm25) : null,
+            valueOrigin: 'DERIVED_FROM_US_AQI',
+            qualityFlag: 'VALID',
+            measuredAtUtc: validMeasuredUtc,
+            measuredAtLocal: formattedLocal
+              ? `${formattedLocal} (GMT+7)`
+              : nowIso,
+            fetchedAtUtc: nowIso,
+            hourlyHistory: fallbackHistory,
+          });
         }
+
+        return mergedStations;
       }
-
-      if (!bestMatch) {
-        return st;
-      }
-
-      const rawUsAqi = Number(bestMatch.aqi);
-      const stationTimeStr = bestMatch.station?.time;
-      const parsedTimeMs = stationTimeStr ? Date.parse(stationTimeStr) : NaN;
-      const validMeasuredUtc = !Number.isNaN(parsedTimeMs)
-        ? new Date(parsedTimeMs).toISOString()
-        : nowIso;
-      const lagMinutes = !Number.isNaN(parsedTimeMs)
-        ? Math.max(1, Math.round((nowMs - parsedTimeMs) / 60000))
-        : 5;
-      const formattedLocal =
-        formatUtcToVietnamTime(validMeasuredUtc) ?? st.measuredAtLocal;
-
-      // If WAQI reports "-" (station offline right now)
-      if (!Number.isFinite(rawUsAqi) || rawUsAqi <= 0) {
-        return {
-          ...st,
-          freshnessStatus: 'UNAVAILABLE',
-          lagMinutes,
-          latestPm25UgM3: null,
-          rawAqiSubindex: null,
-          computedVnAqi: null,
-          measuredAtUtc: validMeasuredUtc,
-          measuredAtLocal: formattedLocal ? `${formattedLocal} (GMT+7)` : st.measuredAtLocal,
-          fetchedAtUtc: nowIso,
-        };
-      }
-
-      const approxPm25 = convertUsAqiToApproximatePm25UgM3(rawUsAqi);
-      const vnAqi = calculateVnAqiFromPm25(approxPm25);
-      const freshnessStatus: DataFreshnessStatus =
-        lagMinutes <= 120
-          ? 'FRESH'
-          : lagMinutes <= 240
-            ? 'DELAYED'
-            : 'STALE';
-
-      return {
-        ...st,
-        freshnessStatus,
-        lagMinutes,
-        latestPm25UgM3: approxPm25,
-        latestPm10UgM3: Number((approxPm25 * 1.18).toFixed(1)),
-        rawAqiSubindex: rawUsAqi,
-        computedVnAqi: vnAqi,
-        measuredAtUtc: validMeasuredUtc,
-        measuredAtLocal: formattedLocal ? `${formattedLocal} (GMT+7)` : st.measuredAtLocal,
-        fetchedAtUtc: nowIso,
-      };
-    });
+    }
+  } catch {
+    // If WAQI live fetch fails and PostGIS succeeded, return PostGIS + snapshot merge
+    if (apiSucceeded) {
+      return mergedStations;
+    }
+    throw new Error('Both PostGIS API and WAQI live feed unavailable');
   }
+
+  return mergedStations;
 }
 
 export async function fetchLivePointInspectionFromApi(

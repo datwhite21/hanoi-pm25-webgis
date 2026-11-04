@@ -55,10 +55,14 @@ jobs:
         run: npm install
 
       - name: Run live OpenAQ v3, WAQI & Open-Meteo ingestion into Supabase PostGIS
-        if: env.DATABASE_URL != ''
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
           WAQI_API_TOKEN: ${{ secrets.WAQI_API_TOKEN }}
-        run: npm run ingest:now
+        run: |
+          if [ -n "$DATABASE_URL" ]; then
+            npm run ingest:now
+          else
+            echo "Skipping live ingestion because DATABASE_URL secret is not configured."
+          fi
 
